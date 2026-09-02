@@ -1,0 +1,16 @@
+{
+  "name": "ניהול ציוד - כושר קרבי",
+  "short_name": "ציוד אימון",
+  "description": "ניהול, אישור ושיוך ציוד באימוני כושר קרבי",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#11140f",
+  "theme_color": "#1d2517",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
