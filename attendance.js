@@ -23,6 +23,7 @@
   const CONTACTS_KEY='combatEquipmentContactsV1';
   const contactName=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim().replace(/\s+/g,' ');
   let editingContact=null;
+  const selectedContacts=new Set();
   function normalizePhone(phone){
     let p=String(phone||'').trim();
     if(!/^\+?[\d\s().-]+$/.test(p))return '';
@@ -106,17 +107,51 @@
     document.getElementById('saveContact').textContent='הוסף איש קשר';
     document.getElementById('cancelContactEdit').hidden=true;
   }
+  function updateContactSelection(){
+    const count=selectedContacts.size;
+    const button=document.getElementById('deleteSelectedContacts');
+    if(button){button.disabled=!count;button.textContent=count?`מחק נבחרים (${count})`:'מחק נבחרים'}
+    const clear=document.getElementById('clearContactSelection');if(clear)clear.disabled=!count;
+    const status=document.getElementById('contactSelectionCount');if(status)status.textContent=`${count} נבחרו`;
+  }
+  function clearContactSelection(){
+    selectedContacts.clear();
+    document.querySelectorAll('[data-contact-select]').forEach(input=>{input.checked=false});
+    updateContactSelection();
+  }
+  function deleteSelectedContacts(){
+    if(!selectedContacts.size)return;
+    try{
+      const list=readContacts(),chosen=list.filter(c=>selectedContacts.has(norm(c.name)));
+      if(!chosen.length){clearContactSelection();return}
+      if(!confirm(`למחוק ${chosen.length} אנשי קשר נבחרים מהמכשיר?\n\n${chosen.map(c=>c.name).join('\n')}\n\nשיוכי הציוד והנוכחות לא יימחקו.`))return;
+      writeContacts(list.filter(c=>!selectedContacts.has(norm(c.name))));
+      resetContactForm();renderContacts();checkAssignedNoShows();
+      contactNotice(`${chosen.length} אנשי קשר נמחקו מהמכשיר`);
+    }catch(e){contactNotice(e.message,true)}
+  }
   function renderContacts(){
+    selectedContacts.clear();updateContactSelection();
     const root=document.getElementById('contactsList');if(!root)return;
     try{
       const contacts=readContacts();
-      root.innerHTML=contacts.length?contacts.map(c=>`<div class="contact-row"><div><strong>${esc(c.name)}</strong><div dir="ltr">+${esc(c.phone)}</div><div class="mini">${c.aliases.length?'שמות חלופיים: '+esc(c.aliases.join(' · ')):''}</div></div><div class="contact-row-actions"><button type="button" class="btn small" data-contact-edit="${esc(norm(c.name))}">עריכה</button><button type="button" class="btn small danger" data-contact-delete="${esc(norm(c.name))}">מחיקה</button></div></div>`).join(''):'<div class="empty">עדיין לא נשמרו אנשי קשר במכשיר הזה</div>';
+      root.innerHTML=contacts.length?contacts.map(c=>`<div class="contact-row"><div class="contact-selection-info"><label class="contact-select"><input type="checkbox" data-contact-select="${esc(norm(c.name))}" aria-label="בחר את ${esc(c.name)} למחיקה"><strong>${esc(c.name)}</strong></label><div dir="ltr">+${esc(c.phone)}</div><div class="mini">${c.aliases.length?'שמות חלופיים: '+esc(c.aliases.join(' · ')):''}</div></div><div class="contact-row-actions"><button type="button" class="btn small" data-contact-edit="${esc(norm(c.name))}">עריכה</button><button type="button" class="btn small danger" data-contact-delete="${esc(norm(c.name))}">מחיקה</button></div></div>`).join(''):'<div class="empty">עדיין לא נשמרו אנשי קשר במכשיר הזה</div>';
     }catch{root.textContent='לא ניתן לקרוא את אנשי הקשר השמורים. הנתונים הקיימים לא שונו.'}
   }
   function buildContactsUI(){
     const panel=document.createElement('details');panel.className='card contacts-card';
     panel.innerHTML=`<summary>אנשי קשר ל־WhatsApp</summary><p class="hint">נשמרים רק בדפדפן במכשיר הזה. אינם מסונכרנים או נשלחים לשרת. בפתיחת WhatsApp, המספר וההודעה מועברים ל־WhatsApp. מחיקת נתוני הדפדפן תמחק גם אותם.</p><form id="contactForm"><div class="field"><label for="contactName">שם כפי שמופיע בשיוך הציוד</label><input id="contactName" class="input" required autocomplete="off"></div><div class="field"><label for="contactPhone">מספר טלפון</label><input id="contactPhone" class="input" type="tel" dir="ltr" placeholder="05X-XXXXXXX או מספר בינלאומי עם קידומת" required autocomplete="off"></div><div class="field"><label for="contactAliases">שמות חלופיים / כינויים (מופרדים ב־|)</label><input id="contactAliases" class="input" autocomplete="off"></div><div class="attendance-actions"><button id="saveContact" class="btn primary" type="submit">הוסף איש קשר</button><button id="cancelContactEdit" class="btn" type="button" hidden>ביטול עריכה</button></div></form><details class="contacts-import"><summary>ייבוא רשימת אנשי קשר</summary><label for="contactsPaste" class="hint">איש קשר בכל שורה: שם,מספר,כינוי ראשון|כינוי שני. ניתן גם להדביק עמודות מגיליון או להפריד בנקודה־פסיק. כינויים הם רשות. מספר מקומי מומר לקידומת ישראל; למספר מחו״ל יש להזין קידומת מדינה. הייבוא מוסיף שמות חדשים ומעדכן מספר וכינויים של שם ראשי זהה.</label><textarea id="contactsPaste" class="input" rows="5" placeholder="שם,מספר,שמות חלופיים" spellcheck="false"></textarea><button id="importContacts" type="button" class="btn">ייבא ושמור במכשיר</button></details><p id="contactNotice" class="hint" role="status" aria-live="polite"></p><div id="contactsList"></div>`;
     document.getElementById('attendance').insertBefore(panel,document.getElementById('noShowWarnings'));
+    const selectionBar=document.createElement('div');selectionBar.className='contact-selection-bar';
+    selectionBar.innerHTML='<p class="hint">למחיקה משותפת, סמן את אנשי הקשר הרצויים ברשימה.</p><div class="attendance-actions"><button type="button" id="deleteSelectedContacts" class="btn danger" disabled>מחק נבחרים</button><button type="button" id="clearContactSelection" class="btn" disabled>בטל בחירה</button></div><p id="contactSelectionCount" class="hint" role="status" aria-live="polite">0 נבחרו</p>';
+    document.getElementById('contactsList').before(selectionBar);
+    document.getElementById('deleteSelectedContacts').onclick=deleteSelectedContacts;
+    document.getElementById('clearContactSelection').onclick=clearContactSelection;
+    document.getElementById('contactsList').onchange=e=>{
+      const input=e.target;if(!input.matches('[data-contact-select]'))return;
+      if(input.checked)selectedContacts.add(input.dataset.contactSelect);else selectedContacts.delete(input.dataset.contactSelect);
+      updateContactSelection();
+    };
     document.getElementById('contactForm').onsubmit=e=>{
       e.preventDefault();
       try{
@@ -160,12 +195,12 @@
   function decorateTraineeChoices(){document.querySelectorAll('.trainee-chip').forEach(b=>{let name='';try{name=decodeURIComponent(b.dataset.name||'')}catch{name=b.textContent||''}const absent=statusOf(name)==='absent';const marked=b.classList.contains('trainee-absent');if(absent&&!marked){b.classList.add('trainee-absent');b.title='מסומן כלא מגיע באימון שנבחר';const s=document.createElement('span');s.className='absent-mark';s.textContent=' · לא מגיע';b.appendChild(s)}else if(!absent&&marked){b.classList.remove('trainee-absent');b.title='';b.querySelector('.absent-mark')?.remove()}})}
   let observerBusy=false;const observer=new MutationObserver(()=>{if(observerBusy)return;observerBusy=true;requestAnimationFrame(()=>{decorateTraineeChoices();observerBusy=false})});observer.observe(document.body,{childList:true,subtree:true});
   const saveBtn=document.getElementById('saveAssignment');if(saveBtn){saveBtn.addEventListener('click',e=>{if(selectedWorkout!=='current')return;if(saveBtn.dataset.attendanceConfirmed==='1'){delete saveBtn.dataset.attendanceConfirmed;return}const name=document.getElementById('personName')?.value.trim();if(name&&statusOf(name)==='absent'){e.preventDefault();e.stopImmediatePropagation();if(confirm(`${name} מסומן כלא מגיע לאימון הנוכחי. בכל זאת לשייך לו ציוד?`)){saveBtn.dataset.attendanceConfirmed='1';saveBtn.click()}}},true)}
-  const style=document.createElement('style');style.textContent='.contacts-card{padding:14px}.contacts-card summary{cursor:pointer;font-weight:800;min-height:40px;padding:8px 0}.contacts-card p,.contacts-import label{line-height:1.6}.contacts-import{margin-top:18px;border-top:1px solid #46513f;padding-top:8px}.contacts-import textarea{margin:10px 0;font:inherit;resize:vertical}.contact-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #46513f;overflow-wrap:anywhere}.contact-row>div:first-child{min-width:0}.contact-row-actions{display:flex;gap:6px;flex-shrink:0}.contacts-card [hidden]{display:none!important}@media(max-width:380px){.contact-row{align-items:stretch;flex-direction:column}}.attendance-card{padding:14px}.attendance-workout{appearance:auto}.attendance-text{min-height:180px;resize:vertical;line-height:1.55}.attendance-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.attendance-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.attendance-stats.single{grid-template-columns:1fr}.attendance-stats>div{text-align:center;border:1px solid #46513f;border-radius:12px;padding:10px;background:#151a13}.attendance-stats strong{display:block;font-size:22px}.attendance-stats span{font-size:11px;color:#b8baaf}.no-show-card{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-color:#74423d}.no-show-info{min-width:0;flex:1}.no-show-actions{display:flex;flex-direction:column;gap:6px;min-width:112px}.whatsapp-btn{background:#183d28;border-color:#2c7a4b;color:#d9ffe7}.copy-btn{background:#242b22;border-color:#56604f;color:#f4f2e8}.trainee-chip.trainee-absent{border-color:#a35249;color:#ffd3ce;background:#321d1b}.absent-mark{font-size:10px;color:#ff9f95}.app-version-fixed{font-size:11px;font-weight:800;color:#aeb3a8;vertical-align:middle;margin-right:6px;white-space:nowrap}@media(max-width:520px){.tabs{gap:5px}.tab{font-size:12px;padding:6px}.attendance-actions{grid-template-columns:1fr}.no-show-card{align-items:stretch;flex-direction:column}.no-show-actions{width:100%;display:grid;grid-template-columns:1fr}.no-show-actions .btn{width:100%}}';document.head.appendChild(style);
+  const style=document.createElement('style');style.textContent='.contact-select{display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px}.contact-select input{width:22px;height:22px;flex-shrink:0;accent-color:#f07a22}.contact-selection-info{flex:1;min-width:0}.contact-selection-bar{border-top:1px solid #46513f;margin-top:12px}.contact-selection-bar .btn:disabled{opacity:.45;cursor:default}.contacts-card{padding:14px}.contacts-card summary{cursor:pointer;font-weight:800;min-height:40px;padding:8px 0}.contacts-card p,.contacts-import label{line-height:1.6}.contacts-import{margin-top:18px;border-top:1px solid #46513f;padding-top:8px}.contacts-import textarea{margin:10px 0;font:inherit;resize:vertical}.contact-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #46513f;overflow-wrap:anywhere}.contact-row>div:first-child{min-width:0}.contact-row-actions{display:flex;gap:6px;flex-shrink:0}.contacts-card [hidden]{display:none!important}@media(max-width:380px){.contact-row{align-items:stretch;flex-direction:column}}.attendance-card{padding:14px}.attendance-workout{appearance:auto}.attendance-text{min-height:180px;resize:vertical;line-height:1.55}.attendance-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.attendance-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.attendance-stats.single{grid-template-columns:1fr}.attendance-stats>div{text-align:center;border:1px solid #46513f;border-radius:12px;padding:10px;background:#151a13}.attendance-stats strong{display:block;font-size:22px}.attendance-stats span{font-size:11px;color:#b8baaf}.no-show-card{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-color:#74423d}.no-show-info{min-width:0;flex:1}.no-show-actions{display:flex;flex-direction:column;gap:6px;min-width:112px}.whatsapp-btn{background:#183d28;border-color:#2c7a4b;color:#d9ffe7}.copy-btn{background:#242b22;border-color:#56604f;color:#f4f2e8}.trainee-chip.trainee-absent{border-color:#a35249;color:#ffd3ce;background:#321d1b}.absent-mark{font-size:10px;color:#ff9f95}.app-version-fixed{font-size:11px;font-weight:800;color:#aeb3a8;vertical-align:middle;margin-right:6px;white-space:nowrap}@media(max-width:520px){.tabs{gap:5px}.tab{font-size:12px;padding:6px}.attendance-actions{grid-template-columns:1fr}.no-show-card{align-items:stretch;flex-direction:column}.no-show-actions{width:100%;display:grid;grid-template-columns:1fr}.no-show-actions .btn{width:100%}}';document.head.appendChild(style);
   buildUI();buildContactsUI();
   document.getElementById('noShowWarnings')?.addEventListener('click',e=>{
     const button=e.target.closest('button');if(!button)return;
     if(button.hasAttribute('data-whatsapp'))openWhatsApp(encodeURIComponent(button.dataset.whatsapp));
     if(button.hasAttribute('data-copy-message'))copyMessage(encodeURIComponent(button.dataset.copyMessage));
   });
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v1.3.7';appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v1.3.8';appTitle.append(' ',version)}
 })();

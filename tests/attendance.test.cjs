@@ -10,10 +10,10 @@ const CK='combatEquipmentContactsV1',PK='combatEquipmentPhonesV1',AK='combatEqui
 function harness(seed={}){
   const data=new Map(Object.entries(seed)),elements={},alerts=[],prompts=[],clipboard=[];
   const localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
-  const ctx={localStorage,document:{getElementById:id=>elements[id]||null},window:{location:{href:''}},navigator:{clipboard:{writeText:async s=>clipboard.push(s)}},alert:s=>alerts.push(s),prompt:(...a)=>prompts.push(a),confirm:()=>true,esc:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),state:{equipment:[]}};
+  const ctx={localStorage,document:{getElementById:id=>elements[id]||null,querySelectorAll:()=>[]},window:{location:{href:''}},navigator:{clipboard:{writeText:async s=>clipboard.push(s)}},alert:s=>alerts.push(s),prompt:(...a)=>prompts.push(a),confirm:()=>true,esc:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),state:{equipment:[]}};
   vm.createContext(ctx);
   // Exercise production functions without booting the DOM observer or page UI.
-  vm.runInContext(source.slice(0,source.indexOf('  let observerBusy='))+`\nwindow.test={normalizePhone,makeContact,parseContacts,validateContacts,readContacts,writeContacts,contactPhone,parseList,statusOf,noShowsWithGear,openWhatsApp,copyMessage,checkAssignedNoShows,select:key=>selectedWorkout=key};})();`,ctx);
+  vm.runInContext(source.slice(0,source.indexOf('  let observerBusy='))+`\nwindow.test={normalizePhone,makeContact,parseContacts,validateContacts,readContacts,writeContacts,contactPhone,parseList,statusOf,noShowsWithGear,openWhatsApp,copyMessage,checkAssignedNoShows,deleteSelectedContacts,selectedContacts,updateContactSelection,clearContactSelection,renderContacts,select:key=>selectedWorkout=key};})();`,ctx);
   return {api:ctx.window.test,ctx,data,elements,alerts,prompts,clipboard};
 }
 test('phone normalization: local, international, punctuation, invalid input',()=>{
@@ -52,6 +52,34 @@ test('corrupt or unavailable storage never routes to a guessed number',()=>{
   assert.equal(a.contactPhone('בדיקה'),'');assert.throws(()=>a.readContacts());assert.equal(data.get(CK),'bad json');
   ctx.localStorage.setItem=()=>{throw Error('quota')};assert.throws(()=>a.writeContacts([]),/לא ניתן לשמור/);
 });
+function bulkHarness(){
+  const h=harness({combatEquipmentStateV1:'equipment sentinel',[AK]:'attendance sentinel'});
+  for(const id of ['contactForm','saveContact','cancelContactEdit','contactsList','contactNotice','deleteSelectedContacts','clearContactSelection','contactSelectionCount'])h.elements[id]={style:{},reset(){}};
+  h.api.writeContacts([h.api.makeContact('ראשון','0500000000',['כינוי ראשון']),h.api.makeContact('נשאר','0500000001',['כינוי נשאר']),h.api.makeContact('אחרון','0500000002',['כינוי אחרון'])]);
+  return h;
+}
+test('bulk deletion removes only selected contacts and aliases, preserving other app data',()=>{
+  const {api:a,ctx,data,elements}=bulkHarness();let confirmation='';
+  a.selectedContacts.add('ראשון');a.selectedContacts.add('אחרון');a.updateContactSelection();
+  assert.equal(elements.deleteSelectedContacts.textContent,'מחק נבחרים (2)');assert.equal(elements.deleteSelectedContacts.disabled,false);
+  ctx.confirm=s=>{confirmation=s;return true};a.deleteSelectedContacts();
+  assert.match(confirmation,/2 אנשי קשר/);assert.ok(confirmation.includes('ראשון\nאחרון'));assert.ok(!confirmation.includes('נשאר'));
+  assert.equal(a.readContacts().length,1);assert.equal(a.contactPhone('כינוי נשאר'),'972500000001');assert.equal(a.contactPhone('כינוי ראשון'),'');assert.equal(a.contactPhone('כינוי אחרון'),'');
+  assert.equal(data.get('combatEquipmentStateV1'),'equipment sentinel');assert.equal(data.get(AK),'attendance sentinel');
+  assert.equal(a.selectedContacts.size,0);assert.equal(elements.deleteSelectedContacts.disabled,true);assert.match(elements.contactNotice.textContent,/2 אנשי קשר נמחקו/);
+});
+test('empty selection, cancellation, clear selection and list refresh never delete contacts',()=>{
+  const {api:a,ctx,data,elements}=bulkHarness();const before=data.get(CK);let prompts=0;
+  ctx.confirm=()=>{prompts++;return false};a.deleteSelectedContacts();assert.equal(prompts,0);
+  a.selectedContacts.add('ראשון');a.deleteSelectedContacts();assert.equal(prompts,1);assert.equal(data.get(CK),before);assert.equal(a.selectedContacts.size,1);
+  const boxes=[{checked:true},{checked:true}];ctx.document.querySelectorAll=()=>boxes;a.clearContactSelection();assert.ok(boxes.every(b=>!b.checked));assert.equal(a.selectedContacts.size,0);
+  a.selectedContacts.add('ראשון');a.renderContacts();assert.equal(a.selectedContacts.size,0);assert.equal(elements.deleteSelectedContacts.disabled,true);assert.equal(data.get(CK),before);
+});
+test('failed bulk save preserves contacts and selected rows for retry',()=>{
+  const {api:a,ctx,data,elements}=bulkHarness();const before=data.get(CK);a.selectedContacts.add('ראשון');
+  ctx.localStorage.setItem=()=>{throw Error('quota')};a.deleteSelectedContacts();
+  assert.equal(data.get(CK),before);assert.equal(a.selectedContacts.size,1);assert.match(elements.contactNotice.textContent,/לא ניתן לשמור/);
+});
 test('attendance current/history filtering and unit quantities are preserved',()=>{
   const {api:a,ctx,data}=harness();
   const d=a.parseList('נרשמו באפליקציה\n1. מגיע\nלא מגיעים\n1. נעדר\n2. נעדר ללא ציוד\nנעדר');
@@ -74,18 +102,18 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
   const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS,enhanceHtml};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v22');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v23');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
-  assert.ok(a.ASSETS.includes('./attendance.js?v=7'));assert.ok(html.includes('./attendance.js?v=7'));
-  const enhanced=a.enhanceHtml(html.replace('attendance.js?v=7','attendance.js?v=6'));assert.equal(enhanced.match(/attendance\.js\?v=7/g).length,1);assert.equal(a.enhanceHtml(enhanced),enhanced);
+  assert.ok(a.ASSETS.includes('./attendance.js?v=8'));assert.ok(html.includes('./attendance.js?v=8'));
+  const enhanced=a.enhanceHtml(html.replace('attendance.js?v=8','attendance.js?v=6'));assert.equal(enhanced.match(/attendance\.js\?v=8/g).length,1);assert.equal(a.enhanceHtml(enhanced),enhanced);
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,fetch:async()=>{throw Error('offline')},self:{addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v22'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};
+  const ctx={Response,fetch:async()=>{throw Error('offline')},self:{addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v23'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
-  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=7'));
+  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=8'));
   events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21']);
   cache.set('./index.html',new Response('<body><script src="./attendance.js?v=6"></script></body>'));
-  events.fetch({request:{method:'GET',mode:'navigate'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/attendance\.js\?v=7/);
+  events.fetch({request:{method:'GET',mode:'navigate'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/attendance\.js\?v=8/);
   const request={method:'GET',mode:'cors'};cache.set(request,new Response('cached asset'));events.fetch({request,respondWith:p=>pending=p});assert.equal(await (await pending).text(),'cached asset');
 });
