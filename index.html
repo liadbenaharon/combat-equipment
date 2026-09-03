@@ -4,13 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1d2517">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ציוד אימון">
-<link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icon-192.png">
 <title>ניהול ציוד - כושר קרבי</title>
 <style>
 :root{--bg:#10130e;--panel:#1c2119;--panel2:#252d20;--line:#4e5947;--text:#f4f2e8;--muted:#b8baaf;--orange:#f07a22;--orange2:#ff9a4e;--red:#d75f55;--green:#7da866}
@@ -52,7 +46,6 @@ addEquipmentBtn.onclick=()=>{newEquipName.value='';newEquipQty.value=1;equipment
 saveEquipment.onclick=()=>{const name=newEquipName.value.trim(),qty=Number(newEquipQty.value);if(!name||!Number.isInteger(qty)||qty<1)return alert('יש להזין שם וכמות תקינה');state.equipment.push({id:'custom-'+Date.now(),name,icon:'🎒',qty,checked:Array(qty).fill(false),assignments:[]});equipmentModal.classList.remove('show');save()};
 saveAssignment.onclick=()=>{const e=state.equipment.find(x=>x.id===assignEquipmentId.value),name=personName.value.trim(),qty=Number(personQty.value),left=e.qty-assigned(e);if(!name)return alert('יש להזין שם מתאמן');if(!Number.isInteger(qty)||qty<1)return alert('יש להזין כמות תקינה');if(qty>left)return alert(`נותרו רק ${left} יחידות לשיוך`);e.assignments.push({name,qty});assignModal.classList.remove('show');save()};
 finishBtn.onclick=()=>{if(!confirm('לשמור את האימון בהיסטוריה ולהתחיל אימון חדש?'))return;const people={};state.equipment.forEach(e=>e.assignments.forEach(a=>{(people[a.name]??=[]).push({name:e.name,qty:a.qty})}));const h=histories();h.unshift({id:Date.now(),date:new Intl.DateTimeFormat('he-IL',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),total:state.equipment.reduce((n,e)=>n+e.qty,0),people:Object.entries(people).map(([name,items])=>({name,items})),equipment:structuredClone(state.equipment)});localStorage.setItem(HISTORY_KEY,JSON.stringify(h.slice(0,100)));state.equipment=state.equipment.map(e=>({...e,checked:Array(e.qty).fill(false),assignments:[]}));save();alert('האימון נשמר בהיסטוריה')};clearHistory.onclick=()=>{if(confirm('למחוק את כל היסטוריית האימונים?')){localStorage.removeItem(HISTORY_KEY);renderHistory()}};
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(console.error)}
 renderAll();
 </script>
 <script src="./equipment-icons.js?v=7"></script>
