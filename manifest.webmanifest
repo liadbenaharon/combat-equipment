@@ -8,8 +8,6 @@
   "start_url": "/combat-equipment/",
   "scope": "/combat-equipment/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
-  "orientation": "portrait-primary",
   "background_color": "#11140f",
   "theme_color": "#1d2517",
   "prefer_related_applications": false,
