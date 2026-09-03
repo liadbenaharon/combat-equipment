@@ -1,4 +1,4 @@
-const CACHE='combat-equipment-v26-pwa';
+const CACHE='combat-equipment-v27-pwa';
 const APP_SHELL=[
   '/combat-equipment/',
   '/combat-equipment/index.html',
