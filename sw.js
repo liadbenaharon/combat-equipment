@@ -1,4 +1,4 @@
-const CACHE='combat-equipment-v24';
+const CACHE='combat-equipment-v25';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./equipment-icons.js?v=7','./quantity-shortcut.js?v=2','./history-collapse.js?v=1','./attendance.js?v=8','./contacts-count.js?v=1'];
 function enhanceHtml(html){
  html=html.replace(/<script src="\.\/equipment-icons\.js[^>]*><\/script>/g,'');
