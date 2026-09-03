@@ -1,22 +1,47 @@
-const CACHE='combat-equipment-v25';
-const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./equipment-icons.js?v=7','./quantity-shortcut.js?v=2','./history-collapse.js?v=1','./attendance.js?v=8','./contacts-count.js?v=1'];
-function enhanceHtml(html){
- html=html.replace(/<script src="\.\/equipment-icons\.js[^>]*><\/script>/g,'');
- html=html.replace(/<script src="\.\/quantity-shortcut\.js[^>]*><\/script>/g,'');
- html=html.replace(/<script src="\.\/history-collapse\.js[^>]*><\/script>/g,'');
- html=html.replace(/<script src="\.\/attendance\.js[^>]*><\/script>/g,'');
- html=html.replace(/<script src="\.\/contacts-count\.js[^>]*><\/script>/g,'');
- html=html.replace(/<span class="app-version-fixed"[^>]*>v[^<]*<\/span>/g,'');
- html=html.replace(/<div class="app-version"[^>]*>v[^<]*<\/div>/g,'');
- html=html.replace('</body>','<script src="./equipment-icons.js?v=7"></script><script src="./quantity-shortcut.js?v=2"></script><script src="./history-collapse.js?v=1"></script><script src="./attendance.js?v=8"></script><script src="./contacts-count.js?v=1"></script></body>');
- return html;
-}
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{
- if(e.request.method!=='GET')return;
- if(e.request.mode==='navigate'){
-  e.respondWith(fetch(e.request,{cache:'no-store'}).then(async r=>new Response(enhanceHtml(await r.text()),{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}})).catch(()=>caches.match('./index.html').then(async r=>new Response(enhanceHtml(await r.text()),{headers:{'Content-Type':'text/html; charset=utf-8'}}))));return;
- }
- e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r;}).catch(()=>caches.match(e.request)));
+const CACHE='combat-equipment-v26-pwa';
+const APP_SHELL=[
+  '/combat-equipment/',
+  '/combat-equipment/index.html',
+  '/combat-equipment/manifest.webmanifest',
+  '/combat-equipment/icon.svg',
+  '/combat-equipment/icon-192.png',
+  '/combat-equipment/icon-512.png',
+  '/combat-equipment/equipment-icons.js?v=7',
+  '/combat-equipment/quantity-shortcut.js?v=2',
+  '/combat-equipment/history-collapse.js?v=1',
+  '/combat-equipment/attendance.js?v=8',
+  '/combat-equipment/contacts-count.js?v=1'
+];
+
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP_SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
+  const url=new URL(event.request.url);
+  if(url.origin!==self.location.origin)return;
+
+  event.respondWith(
+    fetch(event.request).then(response=>{
+      if(response&&response.ok){
+        const copy=response.clone();
+        caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+      }
+      return response;
+    }).catch(async()=>{
+      const cached=await caches.match(event.request);
+      if(cached)return cached;
+      if(event.request.mode==='navigate')return caches.match('/combat-equipment/index.html');
+      return Response.error();
+    })
+  );
 });
