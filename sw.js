@@ -1,4 +1,4 @@
-const CACHE='combat-equipment-v30';
+const CACHE='combat-equipment-v31';
 const APP_SHELL=[
   './','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './equipment-icons.js?v=7','./quantity-shortcut.js?v=2','./history-collapse.js?v=1',
