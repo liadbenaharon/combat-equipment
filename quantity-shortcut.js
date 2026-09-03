@@ -87,10 +87,18 @@
   s.textContent=`.count{cursor:pointer}.count:active{transform:scale(.97)}
   .qty-wheel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:90;display:none;align-items:flex-end;padding:12px}.qty-wheel-overlay.show{display:flex}
   .qty-wheel-sheet{width:min(720px,100%);margin:0 auto;background:#20261c;border:1px solid #535d4a;border-radius:22px 22px 14px 14px;padding:12px 16px 18px}.qty-wheel-handle{width:42px;height:5px;border-radius:999px;background:#697262;margin:0 auto 12px}.qty-wheel-sheet h2{margin:0;text-align:center;font-size:22px}.qty-wheel-subtitle{text-align:center;color:#b8baaf;font-size:13px;margin:6px 0 12px}
-  .qty-wheel-wrap{position:relative;height:210px;overflow:hidden;border-top:1px solid #394234;border-bottom:1px solid #394234}.qty-wheel{height:210px;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}.qty-wheel::-webkit-scrollbar{display:none}.qty-wheel-spacer{height:78px}.qty-wheel-item{display:block;width:100%;height:54px;border:0;background:transparent;color:#858b81;font-size:24px;font-weight:800;scroll-snap-align:center}.qty-wheel-item.selected{color:#fff;font-size:32px}.qty-wheel-highlight{position:absolute;z-index:2;pointer-events:none;left:12px;right:12px;top:78px;height:54px;border-top:1px solid #f07a22;border-bottom:1px solid #f07a22;background:rgba(240,122,34,.08);border-radius:8px}.qty-wheel-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}`;
+  .qty-wheel-wrap{position:relative;height:210px;overflow:hidden;border-top:1px solid #394234;border-bottom:1px solid #394234}.qty-wheel{height:210px;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}.qty-wheel::-webkit-scrollbar{display:none}.qty-wheel-spacer{height:78px}.qty-wheel-item{display:block;width:100%;height:54px;border:0;background:transparent;color:#858b81;font-size:24px;font-weight:800;scroll-snap-align:center}.qty-wheel-item.selected{color:#fff;font-size:32px}.qty-wheel-highlight{position:absolute;z-index:2;pointer-events:none;left:12px;right:12px;top:78px;height:54px;border-top:1px solid #f07a22;border-bottom:1px solid #f07a22;background:rgba(240,122,34,.08);border-radius:8px}.qty-wheel-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.header-app-image{width:26px;height:26px;object-fit:contain;display:block}`;
   document.head.appendChild(s);
 
+  const installButton=document.getElementById('installBtn');
+  if(installButton)installButton.remove();
+  const badge=document.querySelector('.headline .badge');
+  if(badge){
+    badge.innerHTML='<img class="header-app-image" src="./icon-192.png" width="26" height="26" alt="ציוד אימון"><span>ציוד אימון</span>';
+    badge.style.display='flex';badge.style.alignItems='center';badge.style.gap='7px';
+  }
+
   document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());
-  const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v1.2.5';appTitle.append(' ',version)}
+  const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v1.2.6';appTitle.append(' ',version)}
   renderEquipment();
 })();
