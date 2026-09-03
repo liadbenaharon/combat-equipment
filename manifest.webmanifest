@@ -1,17 +1,21 @@
 {
+  "id": "/combat-equipment/",
   "name": "ניהול ציוד - כושר קרבי",
   "short_name": "ציוד אימון",
   "description": "ניהול, אישור ושיוך ציוד באימוני כושר קרבי",
   "lang": "he",
   "dir": "rtl",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/combat-equipment/",
+  "scope": "/combat-equipment/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#11140f",
   "theme_color": "#1d2517",
+  "prefer_related_applications": false,
   "icons": [
-    {"src":"./icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
-    {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {"src":"/combat-equipment/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"/combat-equipment/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"/combat-equipment/icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
   ]
 }
