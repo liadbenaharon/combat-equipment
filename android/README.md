@@ -6,7 +6,7 @@
 
 - Application ID מומלץ: `com.liadbenaharon.combatequipment`
 - כתובת ההשקה: `https://liadbenaharon.github.io/combat-equipment/`
-- גרסת Android ראשונה: `2.3.2` / version code `232`
+- גרסת Android ראשונה: `2.3.3` / version code `233`
 - ללא הרשאות, analytics או notifications שאינם נדרשים על ידי האפליקציה.
 - תצורת Bubblewrap מוכנה בקובץ [`twa-manifest.example.json`](twa-manifest.example.json).
 
