@@ -89,6 +89,16 @@ test('attendance current/history filtering and unit quantities are preserved',()
   assert.equal(a.noShowsWithGear().length,1);assert.equal(a.noShowsWithGear()[0].gear[0].qty,3);
   data.set('combatEquipmentHistoryV1',JSON.stringify([{id:'test',date:'past',equipment:[{name:'חבל',assignments:[{name:'נעדר',qty:4}]}]}]));data.set(AK,JSON.stringify({current:d,'history:test':d}));a.select('history:test');assert.equal(a.noShowsWithGear()[0].gear[0].qty,4);
 });
+test('attendance matches a short equipment name to a unique full attendance name',()=>{
+  const {api:a,ctx,data}=harness();
+  data.set(AK,JSON.stringify({current:{attending:['דניאל כהן'],absent:['תומר גולדנברג']}}));
+  ctx.state.equipment=[{id:'water',name:'מים',assignments:[{name:'תומר',qty:1}]}];
+  assert.equal(a.statusOf('תומר'),'absent');
+  assert.equal(a.noShowsWithGear()[0].name,'תומר');
+  data.set(AK,JSON.stringify({current:{attending:['תומר כהן'],absent:['תומר גולדנברג']}}));
+  assert.equal(a.statusOf('תומר'),'unknown');
+  assert.equal(a.noShowsWithGear().length,0);
+});
 test('WhatsApp direct/fallback URLs, copy and special characters in names',async()=>{
   const {api:a,ctx,data,elements,clipboard,prompts}=harness();
   const name="בדיקה O'Name <tag>";
@@ -100,16 +110,16 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v46'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v47'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v46');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v47');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
   assert.ok(a.ASSETS.includes('./attendance.js?v=10'));assert.ok(html.includes('./attendance.js?v=10'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v46'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v46'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v47'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v47'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
   let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=10'));
   events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21']);
