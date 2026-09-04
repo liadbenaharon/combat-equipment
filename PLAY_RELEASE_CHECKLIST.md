@@ -8,7 +8,7 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 - [x] Maskable-capable 512 icon with an opaque background and safe central artwork.
 - [x] Offline app shell and navigation fallback.
 - [x] Controlled service-worker update prompt and cache cleanup.
-- [x] Central app/cache version and visible `v2.3.0`.
+- [x] Central app/cache version and visible `v2.3.1`.
 - [x] Backward-compatible data normalization and stable history ids.
 - [x] Local JSON backup/restore with validation and rollback on failed import.
 - [x] Privacy page, offline status, storage error feedback, keyboard dialog close, focus visibility, reduced-motion support, touch targets, safe areas, and narrow-screen adjustments.
