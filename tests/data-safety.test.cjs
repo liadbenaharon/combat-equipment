@@ -68,15 +68,28 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.2\.0'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.3\.0'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.2.0');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.3.0');
 });
 
 test('backup success status is automatically dismissed',()=>{
   const source=fs.readFileSync(path.join(root,'app-lifecycle.js'),'utf8');
   assert.match(source,/announce\('הגיבוי הורד בהצלחה'\)/);
   assert.match(source,/if\(duration>0\)statusTimer=setTimeout\(\(\)=>\{node\.hidden=true;node\.textContent=''\},duration\)/);
+});
+
+test('Google Play wrapper preparation stays aligned with the web release',()=>{
+  const web=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
+  const twa=JSON.parse(fs.readFileSync(path.join(root,'android','twa-manifest.example.json'),'utf8'));
+  assert.equal(web.start_url,'/combat-equipment/');
+  assert.equal(web.scope,'/combat-equipment/');
+  assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
+  assert.equal(twa.startUrl,web.start_url);
+  assert.equal(twa.appVersion,'2.3.0');
+  assert.equal(twa.appVersionCode,230);
+  assert.equal(twa.enableNotifications,false);
+  assert.match(fs.readFileSync(path.join(root,'android','README.md'),'utf8'),/Digital Asset Links/);
 });
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
@@ -95,3 +108,4 @@ test('attendance and returns use stable history ids and finish moves current att
   assert.match(attendance,/key:`history:\$\{x\.id\|\|i\}`/);assert.match(attendance,/legacyKey:'history-'\+i/);
   assert.match(returns,/attendance\[`history:\$\{id\}`\]=attendance\.current/);assert.match(returns,/delete attendance\.current/);assert.match(returns,/CombatData\.transaction/);
 });
+
