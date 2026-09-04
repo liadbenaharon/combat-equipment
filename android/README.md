@@ -21,7 +21,7 @@ Set-Location android-build
 bubblewrap init --manifest https://liadbenaharon.github.io/combat-equipment/manifest.webmanifest
 ```
 
-במהלך האתחול יש לבחור את ה־Application ID שמופיע למעלה, או להעתיק את הערכים מ־`twa-manifest.example.json`. לאחר מכן:
+במהלך האתחול יש לבחור את ה־Application ID שמופיע למעלה, או להעתיק את הערכים מ־`twa-manifest.example.json`. את שדות `signingKey` שבקובץ הדוגמה יש להחליף בנתיב וב־alias אמיתיים, או לתת ל־Bubblewrap ליצור מפתח חדש. אין להעתיק את ערכי ה־placeholder כמו שהם. לאחר מכן:
 
 ```powershell
 bubblewrap update
