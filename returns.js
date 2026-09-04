@@ -71,10 +71,12 @@
     if(missingCount&&!confirm(`⚠️ עדיין לא הוחזרו ${missingCount} יחידות ציוד.\n\nלשמור את האימון בכל זאת ולהעביר את החובות אוטומטית לאימון הבא?`)){returnMode=true;missingOnly=true;view='people';renderReturns();return}
     if(!confirm(missingCount?'לשמור את האימון ולהתחיל אימון חדש? החובות יישארו פתוחים עד שיוחזרו.':'כל הציוד הוחזר. לשמור את האימון ולהתחיל אימון חדש?'))return;
     const people={};state.equipment.forEach(e=>e.assignments.forEach(a=>{(people[a.name]??=[]).push({name:e.name,qty:a.qty})}));
-    const id=Date.now(),h=historyItems();h.unshift({id,date:new Intl.DateTimeFormat('he-IL',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),total:state.equipment.reduce((n,e)=>n+e.qty,0),people:Object.entries(people).map(([name,items])=>({name,items})),equipment:structuredClone(state.equipment)});localStorage.setItem(HISTORY_KEY,JSON.stringify(h.slice(0,100)));
-    const all=readAll(),current=all.current||{};all[`history:${id}`]=current;delete all.current;writeAll(all);
-    try{const attendance=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}');if(attendance.current){attendance[`history:${id}`]=attendance.current;delete attendance.current;localStorage.setItem(ATTENDANCE_KEY,JSON.stringify(attendance))}}catch{}
-    state.equipment=state.equipment.map(e=>({...e,checked:Array(e.qty).fill(false),assignments:[]}));localStorage.setItem('combatEquipmentStateV1',JSON.stringify(state));selectedWorkout='current';renderAll();alert(missingCount?'האימון נשמר. ציוד שלא הוחזר יופיע אוטומטית כחוב באימון הבא.':'האימון נשמר בהיסטוריה')
+    const id=Date.now(),h=historyItems();h.unshift({id,date:new Intl.DateTimeFormat('he-IL',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),total:state.equipment.reduce((n,e)=>n+e.qty,0),people:Object.entries(people).map(([name,items])=>({name,items})),equipment:structuredClone(state.equipment)});
+    const all=readAll(),current=all.current||{};all[`history:${id}`]=current;delete all.current;
+    let attendance={};try{attendance=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}')}catch{}if(attendance.current){attendance[`history:${id}`]=attendance.current;delete attendance.current}
+    const nextState={...state,equipment:state.equipment.map(e=>({...e,checked:Array(e.qty).fill(false),assignments:[]}))};
+    if(!CombatData.transaction({[HISTORY_KEY]:h.slice(0,100),[RETURN_KEY]:all,[ATTENDANCE_KEY]:attendance,combatEquipmentStateV1:nextState})){alert('האימון לא נשמר. לא בוצע שינוי בנתונים; נסו לפנות מקום במכשיר ולנסות שוב.');return}
+    state=nextState;selectedWorkout='current';renderAll();alert(missingCount?'האימון נשמר. ציוד שלא הוחזר יופיע אוטומטית כחוב באימון הבא.':'האימון נשמר בהיסטוריה')
   }
 
   window.combatReturnMissing=missingCurrent;window.renderCombatReturns=renderReturns;window.combatOpenReturnMode=()=>{returnMode=true;document.querySelector('[data-tab="check"]')?.click();renderReturns();returnPanel?.scrollIntoView({behavior:'smooth',block:'start'})};window.combatConfirmFinish=()=>true;window.combatResetReturns=()=>{};window.combatDeleteReturnWorkout=historyId=>{const all=readAll();delete all[`history:${historyId}`];writeAll(all);if(selectedWorkout===`history:${historyId}`)selectedWorkout='current';renderReturns()};

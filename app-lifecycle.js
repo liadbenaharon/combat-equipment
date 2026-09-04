@@ -14,17 +14,18 @@
   function addDataTools(){
     const summary=document.getElementById('summary');if(!summary||document.getElementById('dataTools'))return;
     const card=document.createElement('section');card.id='dataTools';card.className='card data-tools';card.setAttribute('aria-labelledby','dataToolsTitle');
-    card.innerHTML='<h2 id="dataToolsTitle">גיבוי ופרטיות</h2><p class="mini">המידע נשמר רק במכשיר הזה. מומלץ להוריד גיבוי מדי פעם.</p><div class="data-tool-actions"><button type="button" class="btn" id="exportData">הורדת גיבוי</button><label class="btn import-label">שחזור מגיבוי<input id="importData" type="file" accept="application/json,.json"></label></div><p><a href="./privacy.html">מדיניות פרטיות</a></p>';
+    card.innerHTML='<h2 id="dataToolsTitle">גיבוי ופרטיות</h2><p class="mini">המידע נשמר רק במכשיר הזה. קובץ הגיבוי כולל גם שמות ומספרי אנשי קשר שהזנת — שמרו אותו במקום פרטי.</p><div class="data-tool-actions"><button type="button" class="btn" id="exportData">הורדת גיבוי</button><label class="btn import-label">שחזור מגיבוי<input id="importData" type="file" accept="application/json,.json"></label></div><button type="button" class="btn danger clear-device-data" id="clearDeviceData">מחיקת כל הנתונים מהמכשיר</button><p><a href="./privacy.html">מדיניות פרטיות</a></p>';
     summary.appendChild(card);
     document.getElementById('exportData').onclick=()=>{
       try{const blob=new Blob([JSON.stringify(CombatData.exportBackup(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`combat-equipment-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);announce('הגיבוי הורד בהצלחה')}
       catch{announce('לא ניתן ליצור גיבוי. ייתכן שחלק מהנתונים פגומים.','error')}
     };
     document.getElementById('importData').onchange=async event=>{
-      const input=event.currentTarget,file=input.files?.[0];if(!file)return;
+      const input=event.currentTarget,file=input.files?.[0];if(!file)return;if(file.size>5*1024*1024){announce('קובץ הגיבוי גדול מדי. הגודל המרבי הוא 5MB.','error');input.value='';return}
       try{const payload=JSON.parse(await file.text());CombatData.validateBackup(payload);if(!confirm('השחזור יחליף נתונים קיימים שנמצאים בגיבוי. להמשיך?'))return;CombatData.importBackup(payload);announce('הגיבוי שוחזר. האפליקציה נטענת מחדש.');setTimeout(()=>location.reload(),500)}
       catch(error){announce(error?.message||'לא ניתן לשחזר את הגיבוי','error')}finally{input.value=''}
     };
+    document.getElementById('clearDeviceData').onclick=()=>{if(!confirm('למחוק את כל הציוד, השיוכים, הנוכחות, ההיסטוריה ואנשי הקשר מהמכשיר הזה?\n\nמומלץ להוריד גיבוי לפני המחיקה.'))return;if(!confirm('זו מחיקה מלאה שלא ניתן לבטל ללא קובץ גיבוי. למחוק עכשיו?'))return;CombatData.clearAll();location.reload()};
   }
   function addUpdateButton(registration){
     let button=document.getElementById('appUpdate');if(button)return;
@@ -40,9 +41,11 @@
   }
   function updateNetwork(){document.documentElement.classList.toggle('is-offline',!navigator.onLine);announce(navigator.onLine?'החיבור חזר':'אין חיבור — עובדים מהמידע השמור',navigator.onLine?'info':'offline')}
   function improveDialogs(){
-    document.querySelectorAll('.overlay').forEach(overlay=>{overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-hidden',String(!overlay.classList.contains('show')))});
+    for(const id of ['newEquipName','newEquipQty','personName','personQty']){const input=document.getElementById(id),label=input?.closest('.field')?.querySelector('label');if(label)label.htmlFor=id}
+    document.getElementById('newEquipName')?.setAttribute('autocomplete','off');document.getElementById('personName')?.setAttribute('autocomplete','name');document.getElementById('newEquipQty')?.setAttribute('inputmode','numeric');document.getElementById('personQty')?.setAttribute('inputmode','numeric');
+    document.querySelectorAll('.overlay').forEach((overlay,index)=>{overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-hidden',String(!overlay.classList.contains('show')));const title=overlay.querySelector('h2');if(title){title.id||=`dialog-title-${index}`;overlay.setAttribute('aria-labelledby',title.id)}});
     new MutationObserver(records=>records.forEach(record=>{const overlay=record.target;overlay.setAttribute('aria-hidden',String(!overlay.classList.contains('show')))})).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
-    document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;const open=document.querySelector('.overlay.show');if(open){open.classList.remove('show');open.querySelector('input,button')?.blur()}});
+    document.addEventListener('keydown',event=>{const open=document.querySelector('.overlay.show');if(!open)return;if(event.key==='Escape'){open.classList.remove('show');open.querySelector('input,button')?.blur();return}if(event.key==='Tab'){const items=[...open.querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>!x.disabled&&!x.hidden),first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}});
   }
   function addReleaseStyles(){
     const style=document.createElement('style');style.textContent=`

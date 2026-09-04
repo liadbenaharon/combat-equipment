@@ -49,6 +49,17 @@
     try{localStorage.setItem(key,JSON.stringify(value));return true}
     catch(error){root.dispatchEvent?.(new CustomEvent('combat-storage-error',{detail:{key,error}}));return false}
   }
+  function transaction(entries){
+    const previous=new Map(),written=[];
+    try{
+      for(const [key,value] of Object.entries(entries)){previous.set(key,localStorage.getItem(key));localStorage.setItem(key,JSON.stringify(value));written.push(key)}
+      return true;
+    }catch(error){
+      for(const key of written){try{const before=previous.get(key);if(before===null)localStorage.removeItem(key);else localStorage.setItem(key,before)}catch{}}
+      root.dispatchEvent?.(new CustomEvent('combat-storage-error',{detail:{keys:Object.keys(entries),error}}));
+      return false;
+    }
+  }
   function loadState(defaults){try{return normalizeState(parse(KEYS.state,null),defaults)}catch{return normalizeState(null,defaults)}}
   function loadHistory(){try{return normalizeHistory(parse(KEYS.history,[]))}catch{return []}}
   function exportBackup(){
@@ -58,16 +69,25 @@
   function validateBackup(payload){
     if(!payload||payload.app!=='combat-equipment'||!payload.data||typeof payload.data!=='object'||Array.isArray(payload.data))throw new Error('קובץ הגיבוי אינו תקין');
     const allowed=new Set(Object.values(KEYS));for(const key of Object.keys(payload.data))if(!allowed.has(key))throw new Error('קובץ הגיבוי מכיל שדה לא מוכר');
-    if(own(payload.data,KEYS.state))normalizeState(payload.data[KEYS.state],[]);
-    if(own(payload.data,KEYS.history))normalizeHistory(payload.data[KEYS.history]);
+    if(own(payload.data,KEYS.state)&&(!payload.data[KEYS.state]||!Array.isArray(payload.data[KEYS.state].equipment)))throw new Error('מצב הציוד בגיבוי אינו תקין');
+    if(own(payload.data,KEYS.history)&&!Array.isArray(payload.data[KEYS.history]))throw new Error('היסטוריית האימונים בגיבוי אינה תקינה');
+    for(const key of [KEYS.attendance,KEYS.returns,KEYS.phones])if(own(payload.data,key)&&(!payload.data[key]||typeof payload.data[key]!=='object'||Array.isArray(payload.data[key])))throw new Error(`השדה ${key} בגיבוי אינו תקין`);
+    for(const key of [KEYS.contacts,KEYS.trainees])if(own(payload.data,key)&&!Array.isArray(payload.data[key]))throw new Error(`השדה ${key} בגיבוי אינו תקין`);
     return true;
   }
+  function sanitizedBackupData(payload){
+    validateBackup(payload);const data={...payload.data};
+    if(own(data,KEYS.state))data[KEYS.state]=normalizeState(data[KEYS.state],[]);
+    if(own(data,KEYS.history))data[KEYS.history]=normalizeHistory(data[KEYS.history]);
+    return data;
+  }
   function importBackup(payload){
-    validateBackup(payload);const previous=new Map(),written=[];
+    const incoming=sanitizedBackupData(payload),previous=new Map(),written=[];
     try{
-      for(const [key,value] of Object.entries(payload.data)){previous.set(key,localStorage.getItem(key));localStorage.setItem(key,JSON.stringify(value));written.push(key)}
+      for(const [key,value] of Object.entries(incoming)){previous.set(key,localStorage.getItem(key));localStorage.setItem(key,JSON.stringify(value));written.push(key)}
     }catch(error){for(const key of written){const before=previous.get(key);if(before===null)localStorage.removeItem(key);else localStorage.setItem(key,before)}throw new Error('לא ניתן לשחזר את הגיבוי; הנתונים הקיימים נשמרו',{cause:error})}
     return written.length;
   }
-  root.CombatData={KEYS,normalizeState,normalizeHistory,loadState,loadHistory,writeJson,exportBackup,validateBackup,importBackup};
+  function clearAll(){for(const key of Object.values(KEYS))localStorage.removeItem(key)}
+  root.CombatData={KEYS,normalizeState,normalizeHistory,loadState,loadHistory,writeJson,transaction,exportBackup,validateBackup,importBackup,clearAll};
 })(typeof window!=='undefined'?window:globalThis);
