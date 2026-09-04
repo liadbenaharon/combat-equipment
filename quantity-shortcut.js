@@ -99,6 +99,6 @@
   }
 
   document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());
-  const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v1.2.6';appTitle.append(' ',version)}
+  const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'1.7.0');appTitle.append(' ',version)}
   renderEquipment();
 })();

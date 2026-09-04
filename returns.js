@@ -73,6 +73,7 @@
     const people={};state.equipment.forEach(e=>e.assignments.forEach(a=>{(people[a.name]??=[]).push({name:e.name,qty:a.qty})}));
     const id=Date.now(),h=historyItems();h.unshift({id,date:new Intl.DateTimeFormat('he-IL',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),total:state.equipment.reduce((n,e)=>n+e.qty,0),people:Object.entries(people).map(([name,items])=>({name,items})),equipment:structuredClone(state.equipment)});localStorage.setItem(HISTORY_KEY,JSON.stringify(h.slice(0,100)));
     const all=readAll(),current=all.current||{};all[`history:${id}`]=current;delete all.current;writeAll(all);
+    try{const attendance=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}');if(attendance.current){attendance[`history:${id}`]=attendance.current;delete attendance.current;localStorage.setItem(ATTENDANCE_KEY,JSON.stringify(attendance))}}catch{}
     state.equipment=state.equipment.map(e=>({...e,checked:Array(e.qty).fill(false),assignments:[]}));localStorage.setItem('combatEquipmentStateV1',JSON.stringify(state));selectedWorkout='current';renderAll();alert(missingCount?'האימון נשמר. ציוד שלא הוחזר יופיע אוטומטית כחוב באימון הבא.':'האימון נשמר בהיסטוריה')
   }
 

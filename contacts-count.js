@@ -4,7 +4,7 @@
   const PHONE_KEY='combatEquipmentPhonesV1';
   const ATTENDANCE_KEY='combatEquipmentAttendanceV2';
   const TRAINEES_KEY='combatEquipmentTraineesV1';
-  const VERSION='v1.6.0';
+  const VERSION='v'+(window.COMBAT_APP?.version||'1.7.0');
   const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim().replace(/\s+/g,' ');
   const norm=s=>clean(s).toLocaleLowerCase('he');
   const escHtml=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -12,8 +12,8 @@
   function setVersion(){let version=document.querySelector('.app-version-fixed');const title=document.querySelector('.headline h1');if(!title)return;document.querySelectorAll('.app-version').forEach(el=>el.remove());if(!version){version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';title.append(' ',version)}version.textContent=VERSION}
   function updateContactCount(){const summary=document.querySelector('.contacts-card > summary');if(summary)summary.textContent=`אנשי קשר ל־WhatsApp (${savedContactCount()})`}
   function selectedKey(){return document.getElementById('attendanceWorkout')?.value||'current'}
-  function selectedAttendance(){try{const all=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}'),d=all[selectedKey()]||{};return {attending:Array.isArray(d.attending)?d.attending:[],absent:Array.isArray(d.absent)?d.absent:[]}}catch{return {attending:[],absent:[]}}}
-  function selectedEquipment(){const key=selectedKey();if(key==='current')return typeof state!=='undefined'&&Array.isArray(state?.equipment)?state.equipment:[];const m=key.match(/^history-(\d+)$/);if(!m)return [];try{const h=typeof histories==='function'?histories():JSON.parse(localStorage.getItem('combatEquipmentHistoryV1')||'[]');return Array.isArray(h[Number(m[1])]?.equipment)?h[Number(m[1])].equipment:[]}catch{return []}}
+  function selectedAttendance(){try{const all=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}'),key=selectedKey(),history=typeof histories==='function'?histories():[],index=key.startsWith('history:')?history.findIndex(x=>`history:${x.id}`===key):-1,d=all[key]||(index>=0?all[`history-${index}`]:null)||{};return {attending:Array.isArray(d.attending)?d.attending:[],absent:Array.isArray(d.absent)?d.absent:[]}}catch{return {attending:[],absent:[]}}}
+  function selectedEquipment(){const key=selectedKey();if(key==='current')return typeof state!=='undefined'&&Array.isArray(state?.equipment)?state.equipment:[];try{const h=typeof histories==='function'?histories():JSON.parse(localStorage.getItem('combatEquipmentHistoryV1')||'[]'),legacy=key.match(/^history-(\d+)$/),item=legacy?h[Number(legacy[1])]:h.find(x=>`history:${x.id}`===key);return Array.isArray(item?.equipment)?item.equipment:[]}catch{return []}}
   function savedTrainees(){try{const raw=JSON.parse(localStorage.getItem(TRAINEES_KEY)||'[]');if(Array.isArray(raw))return raw.map(x=>typeof x==='string'?x:(x?.name||'')).filter(Boolean);if(raw&&Array.isArray(raw.names))return raw.names.filter(Boolean)}catch{}return []}
   function candidates(){const map=new Map();selectedEquipment().forEach(eq=>(eq.assignments||[]).forEach(a=>{const name=clean(a.name);if(name&&!map.has(norm(name)))map.set(norm(name),name)}));if(selectedKey()==='current')savedTrainees().forEach(name=>{name=clean(name);if(name&&!map.has(norm(name)))map.set(norm(name),name)});return [...map.values()]}
   function unknownPeople(){const d=selectedAttendance();if(!d.attending.length&&!d.absent.length)return [];const known=new Set([...d.attending,...d.absent].map(norm));return candidates().filter(name=>!known.has(norm(name)))}
