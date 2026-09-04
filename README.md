@@ -1,6 +1,6 @@
 # combat-equipment
 
-Current release: **v2.3.1**
+Current release: **v2.3.2**
 
 אפליקציית ווב Mobile-First בעברית לניהול ומעקב אחר ציוד באימוני כושר קרבי.
 
