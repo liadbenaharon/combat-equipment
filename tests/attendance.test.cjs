@@ -107,6 +107,9 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   a.writeContacts([a.makeContact('שם ראשי','0500000000',[name])]);a.openWhatsApp(encodeURIComponent(name));url=new URL(ctx.window.location.href);assert.equal(url.pathname,'/972500000000');
   await a.copyMessage(encodeURIComponent(name));assert.equal(clipboard[0],url.searchParams.get('text'));
   ctx.navigator.clipboard.writeText=async()=>{throw Error('denied')};await a.copyMessage(encodeURIComponent(name));assert.equal(prompts[0][1],clipboard[0]);
+  ctx.state.equipment=[{name:'חבל',assignments:[{name:'תומר',qty:1}]}];data.set(AK,JSON.stringify({current:{attending:[],absent:['תומר גולדנברג']}}));
+  a.writeContacts([a.makeContact('תומר גולדנברג','0500000001')]);a.openWhatsApp(encodeURIComponent('תומר'));url=new URL(ctx.window.location.href);assert.equal(url.pathname,'/972500000001');
+  ctx.state.equipment=[{name:'חבל',assignments:[{name,qty:2}]}];data.set(AK,JSON.stringify({current:{attending:[],absent:[name]}}));
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
