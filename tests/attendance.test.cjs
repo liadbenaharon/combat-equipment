@@ -100,16 +100,16 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v41'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v42'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v41');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v42');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
   assert.ok(a.ASSETS.includes('./attendance.js?v=10'));assert.ok(html.includes('./attendance.js?v=10'));
-  assert.ok(a.ASSETS.includes('./native-ui.js?v=3'));assert.ok(html.includes('./native-ui.js?v=3'));
+  assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v41'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v41'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v42'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v42'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
   let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=10'));
   events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21']);

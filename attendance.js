@@ -202,5 +202,5 @@
     if(button.hasAttribute('data-whatsapp'))openWhatsApp(encodeURIComponent(button.dataset.whatsapp));
     if(button.hasAttribute('data-copy-message'))copyMessage(encodeURIComponent(button.dataset.copyMessage));
   });
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.0.0');appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.1.0');appTitle.append(' ',version)}
 })();

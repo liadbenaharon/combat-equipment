@@ -62,7 +62,9 @@
   }
   function hardenDataLayer(){
     if(typeof state!=='undefined'&&typeof defaults!=='undefined')state=CombatData.normalizeState(state,defaults);
-    if(typeof save==='function')save=function(){if(!CombatData.writeJson(CombatData.KEYS.state,state)){announce('השינוי לא נשמר. הורידו גיבוי ונסו לפנות מקום במכשיר.','error');return false}renderAll();return true};
+    let lastSnapshot=typeof state!=='undefined'?JSON.parse(JSON.stringify(state)):null;
+    if(typeof save==='function')save=function(){const previous=lastSnapshot;if(!CombatData.writeJson(CombatData.KEYS.state,state)){announce('השינוי לא נשמר. הורידו גיבוי ונסו לפנות מקום במכשיר.','error');return false}lastSnapshot=JSON.parse(JSON.stringify(state));renderAll();if(previous)window.dispatchEvent(new CustomEvent('combat-state-saved',{detail:{previous}}));return true};
+    window.addEventListener('combat-state-restored',()=>{lastSnapshot=JSON.parse(JSON.stringify(state))});
     if(typeof histories==='function')histories=()=>CombatData.loadHistory();
     renderAll?.();
   }
