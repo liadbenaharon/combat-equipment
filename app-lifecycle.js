@@ -50,6 +50,7 @@
     document.addEventListener('keydown',event=>{const open=document.querySelector('.overlay.show');if(!open)return;if(event.key==='Escape'){open.classList.remove('show');open.querySelector('input,button')?.blur();return}if(event.key==='Tab'){const items=[...open.querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>!x.disabled&&!x.hidden),first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}});
   }
   function addReleaseStyles(){
+    const theme=document.createElement('link');theme.rel='stylesheet';theme.href='./app-theme.css?v=5';document.head.appendChild(theme);
     const style=document.createElement('style');style.textContent=`
       :focus-visible{outline:3px solid #ffb36f;outline-offset:3px}
       button,.btn,input,select,textarea{min-height:44px}
