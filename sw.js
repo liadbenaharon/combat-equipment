@@ -1,8 +1,8 @@
-importScripts('./app-config.js?v=5');
+importScripts('./app-config.js?v=6');
 const CACHE=self.COMBAT_APP.cache;
 const ASSETS=[
   './','./index.html','./manifest.webmanifest','./privacy.html',
-  './icon-192.png','./icon-512.png','./app-theme.css?v=5','./app-config.js?v=5','./data-safety.js?v=3',
+  './icon-192.png','./icon-512.png','./app-theme.css?v=5','./app-config.js?v=6','./data-safety.js?v=3',
   './equipment-icons.js?v=7','./quantity-shortcut.js?v=2','./history-collapse.js?v=1',
   './attendance.js?v=10','./contacts-count.js?v=3','./returns.js?v=3','./app-lifecycle.js?v=5','./native-ui.js?v=4'
 ];
@@ -20,3 +20,4 @@ async function asset(request){
   try{const response=await fetch(request);if(response?.ok){const cache=await caches.open(CACHE);cache.put(request,response.clone())}return response}catch{return Response.error()}
 }
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(url.origin!==self.location.origin)return;event.respondWith(event.request.mode==='navigate'?navigation(event.request):asset(event.request))});
+
