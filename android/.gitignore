@@ -1,0 +1,8 @@
+# Never commit signing material or generated Android output.
+*.jks
+*.keystore
+*.p12
+**/build/
+**/.gradle/
+twa-manifest.json
+
