@@ -68,9 +68,15 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.1\.0'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.1\.1'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.1.0');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.1.1');
+});
+
+test('backup success status is automatically dismissed',()=>{
+  const source=fs.readFileSync(path.join(root,'app-lifecycle.js'),'utf8');
+  assert.match(source,/announce\('הגיבוי הורד בהצלחה'\)/);
+  assert.match(source,/if\(duration>0\)statusTimer=setTimeout\(\(\)=>\{node\.hidden=true;node\.textContent=''\},duration\)/);
 });
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{

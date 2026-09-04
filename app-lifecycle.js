@@ -1,10 +1,12 @@
 (function(){
   'use strict';
   const app=window.COMBAT_APP||{version:'unknown'};
-  function announce(message,type='info'){
+  let statusTimer=0;
+  function announce(message,type='info',duration=type==='error'?5000:3200){
     let node=document.getElementById('appStatus');
     if(!node){node=document.createElement('div');node.id='appStatus';node.className='app-status';node.setAttribute('role','status');node.setAttribute('aria-live','polite');document.body.appendChild(node)}
-    node.dataset.type=type;node.textContent=message;node.hidden=false;
+    clearTimeout(statusTimer);node.dataset.type=type;node.textContent=message;node.hidden=false;
+    if(duration>0)statusTimer=setTimeout(()=>{node.hidden=true;node.textContent=''},duration);
   }
   function setVersion(){
     const title=document.querySelector('.headline h1');if(!title)return;
@@ -39,7 +41,7 @@
       registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)addUpdateButton(registration)})});
     }).catch(()=>announce('האפליקציה פועלת, אך מצב לא־מקוון אינו זמין כרגע.','error'));
   }
-  function updateNetwork(){document.documentElement.classList.toggle('is-offline',!navigator.onLine);announce(navigator.onLine?'החיבור חזר':'אין חיבור — עובדים מהמידע השמור',navigator.onLine?'info':'offline')}
+  function updateNetwork(){document.documentElement.classList.toggle('is-offline',!navigator.onLine);announce(navigator.onLine?'החיבור חזר':'אין חיבור — עובדים מהמידע השמור',navigator.onLine?'info':'offline',navigator.onLine?3200:0)}
   function improveDialogs(){
     for(const id of ['newEquipName','newEquipQty','personName','personQty']){const input=document.getElementById(id),label=input?.closest('.field')?.querySelector('label');if(label)label.htmlFor=id}
     document.getElementById('newEquipName')?.setAttribute('autocomplete','off');document.getElementById('personName')?.setAttribute('autocomplete','name');document.getElementById('newEquipQty')?.setAttribute('inputmode','numeric');document.getElementById('personQty')?.setAttribute('inputmode','numeric');

@@ -4,7 +4,7 @@
   const PHONE_KEY='combatEquipmentPhonesV1';
   const ATTENDANCE_KEY='combatEquipmentAttendanceV2';
   const TRAINEES_KEY='combatEquipmentTraineesV1';
-  const VERSION='v'+(window.COMBAT_APP?.version||'2.1.0');
+  const VERSION='v'+(window.COMBAT_APP?.version||'2.1.1');
   const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim().replace(/\s+/g,' ');
   const norm=s=>clean(s).toLocaleLowerCase('he');
   const escHtml=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
