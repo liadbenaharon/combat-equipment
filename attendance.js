@@ -74,6 +74,22 @@
       return matches.length===1?matches[0].phone:'';
     }catch{return ''}
   }
+  function contactPhoneEquivalent(name){
+    try{
+      const contacts=readContacts(),knownNames=contacts.flatMap(c=>[c.name,...c.aliases]);
+      const equivalent=(a,b)=>{
+        const left=norm(a),right=norm(b);
+        if(!left||!right)return false;
+        if(left===right)return true;
+        const shorter=left.length<=right.length?left:right,longer=left.length<=right.length?right:left;
+        if(!longer.startsWith(shorter+' '))return false;
+        const matches=[...new Set(knownNames.map(norm).filter(Boolean))].filter(x=>x===shorter||x.startsWith(shorter+' '));
+        return matches.length===1;
+      };
+      const matches=contacts.filter(c=>[c.name,...c.aliases].some(a=>equivalent(name,a)));
+      return matches.length===1?matches[0].phone:'';
+    }catch{return ''}
+  }
   function splitContactRow(line){
     const delimiter=line.includes('\t')?'\t':line.includes(';')?';':',';
     const cells=[];let cell='',quoted=false;
@@ -188,7 +204,7 @@
   function gearText(person){return (person?.gear||[]).map(g=>`${Number(g.qty||0)} × ${g.name}`).join(' · ')}
   function messageFor(person){return `היי ${person.name}, ראיתי שאתה מסומן כלא מגיע לאימון הקרוב אבל כרגע משויך אליך ${gearText(person)}. תוכל לעדכן אותי לגביהם?`}
   function findPerson(encoded){let name='';try{name=decodeURIComponent(encoded)}catch{name=encoded}return noShowsWithGear().find(p=>norm(p.name)===norm(name))}
-  function openWhatsApp(encoded){const person=findPerson(encoded);if(!person)return alert('לא מצאתי את השיוך של המתאמן');const phone=contactPhone(person.name);const text=encodeURIComponent(messageFor(person));const url=phone?`https://wa.me/${phone}?text=${text}`:`https://wa.me/?text=${text}`;window.location.href=url}
+  function openWhatsApp(encoded){const person=findPerson(encoded);if(!person)return alert('לא מצאתי את השיוך של המתאמן');const phone=contactPhoneEquivalent(person.name);const text=encodeURIComponent(messageFor(person));const url=phone?`https://wa.me/${phone}?text=${text}`:`https://wa.me/?text=${text}`;window.location.href=url}
   async function copyMessage(encoded){const person=findPerson(encoded);if(!person)return alert('לא מצאתי את השיוך של המתאמן');const msg=messageFor(person);try{await navigator.clipboard.writeText(msg);alert('ההודעה הועתקה')}catch{prompt('העתק את ההודעה:',msg)}}
   window.openNoShowWhatsApp=openWhatsApp;
   window.copyNoShowMessage=copyMessage;
