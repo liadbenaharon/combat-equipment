@@ -79,6 +79,14 @@ test('backup success status is automatically dismissed',()=>{
   assert.match(source,/if\(duration>0\)statusTimer=setTimeout\(\(\)=>\{node\.hidden=true;node\.textContent=''\},duration\)/);
 });
 
+test('ambiguous attendance names get an explicit manual-review state',()=>{
+  const source=fs.readFileSync(path.join(root,'contacts-count.js'),'utf8');
+  assert.match(source,/function ambiguousPeople\(\)/);
+  assert.match(source,/שמות שדורשים בדיקה/);
+  assert.match(source,/לא משייכים אוטומטית/);
+  assert.match(source,/trainee-ambiguous/);
+});
+
 test('Google Play wrapper preparation stays aligned with the web release',()=>{
   const web=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
   const twa=JSON.parse(fs.readFileSync(path.join(root,'android','twa-manifest.example.json'),'utf8'));
