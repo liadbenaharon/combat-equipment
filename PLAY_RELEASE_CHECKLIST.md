@@ -8,7 +8,7 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 - [x] Maskable-capable 512 icon with an opaque background and safe central artwork.
 - [x] Offline app shell and navigation fallback.
 - [x] Controlled service-worker update prompt and cache cleanup.
-- [x] Central app/cache version and visible `v2.2.0`.
+- [x] Central app/cache version and visible `v2.3.0`.
 - [x] Backward-compatible data normalization and stable history ids.
 - [x] Local JSON backup/restore with validation and rollback on failed import.
 - [x] Privacy page, offline status, storage error feedback, keyboard dialog close, focus visibility, reduced-motion support, touch targets, safe areas, and narrow-screen adjustments.
@@ -16,13 +16,15 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 
 ## Production PWA verification
 
-- [ ] Deploy the exact tested commit to `https://liadbenaharon.github.io/combat-equipment/` over HTTPS.
+- [x] Deploy the exact tested commit to `https://liadbenaharon.github.io/combat-equipment/` over HTTPS.
 - [ ] In Chrome DevTools, run the Application manifest/installability checks and Lighthouse PWA/accessibility audits on the deployed URL.
 - [ ] Install on at least one current Android phone, launch once online, then verify a cold launch in airplane mode.
 - [ ] Upgrade from the previously installed PWA with real existing data and confirm the update banner, history, attendance, and unresolved return debts remain intact.
 - [ ] Test backup download, restore on a second browser profile, Hebrew RTL layout, rotation, system font scaling, and 320/360/412 px widths.
 
 ## Android wrapper required outside this repository
+
+The repository now includes a copy-ready Bubblewrap configuration and release guide in [`android/`](android/). It fixes the recommended application id, production start URL, icon URLs, version code, and no-notification/no-analytics defaults. The signed bundle and certificate values must still be created by the publisher.
 
 1. Choose a unique Android application id (for example `com.example.combatequipment`; this must be owned and finalized by the publisher).
 2. Generate a Trusted Web Activity project with Bubblewrap or Android Studio, targeting the production HTTPS start URL and current Play target SDK requirements.
@@ -43,3 +45,4 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 ## Release gate
 
 Do not promote beyond Internal testing unless: CI is green, the deployed service worker controls the page, offline cold launch works, an upgrade preserves a realistic backup, Digital Asset Links verifies, the signed bundle passes Play pre-launch reports, and the store/privacy declarations match the final wrapper exactly.
+
