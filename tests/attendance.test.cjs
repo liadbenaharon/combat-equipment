@@ -143,6 +143,17 @@ test('transferring to an existing summary person merges their equipment assignme
   assert.equal(ctx.state.equipment[0].assignments[0].name,'איתי');
   assert.equal(ctx.state.equipment[0].assignments[0].qty,2);
   assert.equal(ctx.state.equipment[0].assignments[0].units.join(','),'0,1');
+  assert.match(elements.noShowWarnings.innerHTML,/הציוד הועבר ל־<b>איתי<\/b>/);
+});
+test('transferring equipment in a historical workout persists the new holder',()=>{
+  const {api:a,data,elements}=harness();
+  data.set('combatEquipmentHistoryV1',JSON.stringify([{id:'past',date:'past',people:[{name:'גרובמן',items:[{name:'אלונקה',qty:1}]}],equipment:[{id:'stretcher',name:'אלונקה',assignments:[{name:'גרובמן',qty:1,units:[0]}]}]}]));
+  data.set(AK,JSON.stringify({'history:past':{attending:[],absent:['שי גרובמן']}}));elements.attendanceResults={innerHTML:''};elements.noShowWarnings={innerHTML:''};a.select('history:past');
+  assert.equal(a.transferEquipment('גרובמן','תומר'),true);
+  const saved=JSON.parse(data.get('combatEquipmentHistoryV1'))[0];
+  assert.equal(saved.equipment[0].assignments[0].name,'תומר');
+  assert.equal(saved.people[0].name,'תומר');
+  assert.match(elements.noShowWarnings.innerHTML,/הציוד הועבר ל־<b>תומר<\/b>/);
 });
 test('transfer UI offers an existing summary person or a new typed name',()=>{
   assert.match(source,/מישהו שכבר בסיכום/);
@@ -174,19 +185,19 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v54'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v55'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v54');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v55');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
-  assert.ok(a.ASSETS.includes('./attendance.js?v=14'));assert.ok(html.includes('./attendance.js?v=14'));
+  assert.ok(a.ASSETS.includes('./attendance.js?v=15'));assert.ok(html.includes('./attendance.js?v=15'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v53'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v54'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v54'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v55'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
-  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=14'));
-  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v53']);
+  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=15'));
+  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v54']);
   cache.set('./index.html',new Response('<body>offline shell</body>'));
   events.fetch({request:{method:'GET',mode:'navigate',url:'https://example.test/app'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/offline shell/);
   const request={method:'GET',mode:'cors',url:'https://example.test/app.js'};cache.set(request,new Response('cached asset'));events.fetch({request,respondWith:p=>pending=p});assert.equal(await (await pending).text(),'cached asset');
