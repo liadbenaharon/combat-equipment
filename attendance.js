@@ -14,7 +14,7 @@
   function selectedInfo(){const opts=workoutOptions();return opts.find(x=>x.key===selectedWorkout)||opts[0]||{key:'current',label:'האימון הנוכחי',equipment:[]}}
   function allData(){try{return JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}')}catch{return {}}}
   function getSelected(){const all=allData(),info=selectedInfo(),d=all[selectedWorkout]||all[info.legacyKey];return d&&Array.isArray(d.attending)&&Array.isArray(d.absent)?d:{attending:[],absent:[],raw:''}}
-  function saveSelected(data){const all=allData(),info=selectedInfo();all[selectedWorkout]=data;if(info.legacyKey)delete all[info.legacyKey];localStorage.setItem(ATTENDANCE_KEY,JSON.stringify(all));renderAttendance();checkAssignedNoShows()}
+  function saveSelected(data){const all=allData(),info=selectedInfo(),previous=all[selectedWorkout]||all[info.legacyKey]||{},next={...data};if(next.asked===undefined&&previous.asked!==undefined)next.asked=previous.asked;if(next.transfers===undefined&&previous.transfers!==undefined)next.transfers=previous.transfers;all[selectedWorkout]=next;if(info.legacyKey)delete all[info.legacyKey];localStorage.setItem(ATTENDANCE_KEY,JSON.stringify(all));renderAttendance();checkAssignedNoShows()}
   function parseList(text){const lines=String(text||'').split(/\r?\n/);let mode='';const attending=[],absent=[];for(const raw of lines){const line=clean(raw);if(!line)continue;const n=norm(line);if(n.includes('נרשמו באפליקציה')){mode='attending';continue}if(n.includes('לא מגיעים')){mode='absent';continue}if(!mode)continue;const name=clean(line);if(!name||/^(מיקום|שעת|ציוד|אימון)/.test(name))continue;const arr=mode==='attending'?attending:absent;if(!arr.some(x=>norm(x)===norm(name)))arr.push(name)}return {attending,absent,raw:text}}
   function editDistance(a,b){
     const left=[...String(a)],right=[...String(b)],row=Array.from({length:right.length+1},(_,i)=>i);
@@ -307,6 +307,6 @@
     if(button.hasAttribute('data-transfer'))openTransfer(encodeURIComponent(button.dataset.transfer));
   });
   document.getElementById('noShowWarnings')?.addEventListener('change',e=>{const input=e.target.closest('input[data-asked]');if(input)setAsked(input.dataset.asked,input.checked)});
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.3.11');appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.3.12');appTitle.append(' ',version)}
 })();
 

@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.3\.11'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.3\.12'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.3.11');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.3.12');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -94,15 +94,15 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.3.11');
-  assert.equal(twa.appVersionCode,241);
+  assert.equal(twa.appVersion,'2.3.12');
+  assert.equal(twa.appVersionCode,242);
   assert.equal(twa.enableNotifications,false);
   assert.match(fs.readFileSync(path.join(root,'android','README.md'),'utf8'),/Digital Asset Links/);
 });
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),theme=fs.readFileSync(path.join(root,'app-theme.css'),'utf8');
-  assert.match(html,/app-theme\.css\?v=5/);assert.match(html,/app-config\.js\?v=7/);assert.match(html,/native-ui\.js\?v=4/);assert.match(sw,/app-theme\.css\?v=5/);assert.match(sw,/app-config\.js\?v=7/);assert.match(sw,/native-ui\.js\?v=4/);
+  assert.match(html,/app-theme\.css\?v=5/);assert.match(html,/app-config\.js\?v=8/);assert.match(html,/native-ui\.js\?v=4/);assert.match(sw,/app-theme\.css\?v=5/);assert.match(sw,/app-config\.js\?v=8/);assert.match(sw,/native-ui\.js\?v=4/);
   assert.match(theme,/@media\(max-width:699px\)/);assert.match(theme,/position:fixed/);assert.match(theme,/safe-area-inset-bottom/);
 });
 
