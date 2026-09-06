@@ -13,7 +13,7 @@ function harness(seed={}){
   const ctx={localStorage,document:{getElementById:id=>elements[id]||null,querySelectorAll:()=>[]},window:{location:{href:''}},navigator:{clipboard:{writeText:async s=>clipboard.push(s)}},alert:s=>alerts.push(s),prompt:(...a)=>prompts.push(a),confirm:()=>true,esc:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),state:{equipment:[]}};
   vm.createContext(ctx);
   // Exercise production functions without booting the DOM observer or page UI.
-  vm.runInContext(source.slice(0,source.indexOf('  let observerBusy='))+`\nwindow.test={normalizePhone,makeContact,parseContacts,validateContacts,readContacts,writeContacts,contactPhone,parseList,statusOf,similarName,analyzeNoShowsWithGear,noShowsWithGear,wasAsked,setAsked,transferEquipment,openWhatsApp,copyMessage,checkAssignedNoShows,deleteSelectedContacts,selectedContacts,updateContactSelection,clearContactSelection,renderContacts,select:key=>selectedWorkout=key};})();`,ctx);
+  vm.runInContext(source.slice(0,source.indexOf('  let observerBusy='))+`\nwindow.test={normalizePhone,makeContact,parseContacts,validateContacts,readContacts,writeContacts,contactPhone,parseList,statusOf,similarName,analyzeNoShowsWithGear,noShowsWithGear,wasAsked,setAsked,transferEquipment,openWhatsApp,copyMessage,checkAssignedNoShows,deleteSelectedContacts,selectedContacts,updateContactSelection,clearContactSelection,renderContacts,select:setSelectedWorkout};})();`,ctx);
   return {api:ctx.window.test,ctx,data,elements,alerts,prompts,clipboard};
 }
 test('phone normalization: local, international, punctuation, invalid input',()=>{
@@ -155,6 +155,13 @@ test('transferring equipment in a historical workout persists the new holder',()
   assert.equal(saved.people[0].name,'תומר');
   assert.match(elements.noShowWarnings.innerHTML,/הציוד הועבר ל־<b>תומר<\/b>/);
 });
+test('selected historical workout and transfer notice survive a full reload',()=>{
+  const history=JSON.stringify([{id:'past',date:'past',people:[{name:'תומר',items:[{name:'אלונקה',qty:1}]}],equipment:[{id:'stretcher',name:'אלונקה',assignments:[{name:'תומר',qty:1,units:[0]}]}]}]);
+  const attendance=JSON.stringify({'history:past':{attending:[],absent:['שי גרובמן'],asked:{גרובמן:true},transfers:{גרובמן:{from:'גרובמן',to:'תומר',gear:[{name:'אלונקה',qty:1}]}}}});
+  const {api:a,elements}=harness({combatEquipmentHistoryV1:history,[AK]:attendance,combatEquipmentAttendanceWorkoutV1:'history:past'});elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();
+  assert.match(elements.noShowWarnings.innerHTML,/past/);
+  assert.match(elements.noShowWarnings.innerHTML,/שאלתי אותו — הציוד הועבר ל־<b>תומר<\/b>/);
+});
 test('transfer UI offers an existing summary person or a new typed name',()=>{
   assert.match(source,/מישהו שכבר בסיכום/);
   assert.match(source,/מישהו חדש/);
@@ -185,19 +192,19 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v55'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v56'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v55');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v56');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
-  assert.ok(a.ASSETS.includes('./attendance.js?v=15'));assert.ok(html.includes('./attendance.js?v=15'));
+  assert.ok(a.ASSETS.includes('./attendance.js?v=16'));assert.ok(html.includes('./attendance.js?v=16'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v54'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v55'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v55'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v56'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
-  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=15'));
-  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v54']);
+  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=16'));
+  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v55']);
   cache.set('./index.html',new Response('<body>offline shell</body>'));
   events.fetch({request:{method:'GET',mode:'navigate',url:'https://example.test/app'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/offline shell/);
   const request={method:'GET',mode:'cors',url:'https://example.test/app.js'};cache.set(request,new Response('cached asset'));events.fetch({request,respondWith:p=>pending=p});assert.equal(await (await pending).text(),'cached asset');
