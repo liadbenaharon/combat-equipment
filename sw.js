@@ -1,10 +1,10 @@
-importScripts('./app-config.js?v=6');
+importScripts('./app-config.js?v=7');
 const CACHE=self.COMBAT_APP.cache;
 const ASSETS=[
   './','./index.html','./manifest.webmanifest','./privacy.html',
-  './icon-192.png','./icon-512.png','./app-theme.css?v=5','./app-config.js?v=6','./data-safety.js?v=3',
+  './icon-192.png','./icon-512.png','./app-theme.css?v=5','./app-config.js?v=7','./data-safety.js?v=3',
   './equipment-icons.js?v=7','./quantity-shortcut.js?v=2','./history-collapse.js?v=1',
-  './attendance.js?v=16','./contacts-count.js?v=6','./returns.js?v=3','./app-lifecycle.js?v=5','./native-ui.js?v=4'
+  './attendance.js?v=17','./contacts-count.js?v=6','./returns.js?v=3','./app-lifecycle.js?v=6','./native-ui.js?v=4'
 ];
 
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));

@@ -5,10 +5,12 @@
   const SELECTED_WORKOUT_KEY='combatEquipmentAttendanceWorkoutV1';
   const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').replace(/[*.]/g,'').replace(/^\s*\d+[.)]?\s*/,'').replace(/^\s*[⁠•\-–—]+\s*/,'').trim();
   const norm=s=>clean(s).replace(/\s+/g,' ').toLocaleLowerCase('he');
-  let selectedWorkout=localStorage.getItem(SELECTED_WORKOUT_KEY)||'current';
+  let selectedWorkout='current';
   function setSelectedWorkout(key){selectedWorkout=String(key||'current');localStorage.setItem(SELECTED_WORKOUT_KEY,selectedWorkout)}
   function historyItems(){try{return typeof histories==='function'?histories():JSON.parse(localStorage.getItem('combatEquipmentHistoryV1')||'[]')}catch{return []}}
-  function workoutOptions(){const h=historyItems();return [{key:'current',label:'האימון הנוכחי',equipment:Array.isArray(state?.equipment)?state.equipment:[]}].concat(h.map((x,i)=>({key:`history:${x.id||i}`,legacyKey:'history-'+i,label:x?.date||`אימון ${i+1}`,equipment:Array.isArray(x?.equipment)?x.equipment:[]})))}
+  function latestWorkoutKey(){const latest=historyItems()[0];return latest?`history:${latest.id||0}`:'current'}
+  selectedWorkout=latestWorkoutKey();
+  function workoutOptions(){const h=historyItems();return [{key:'current',label:'האימון הנוכחי',equipment:Array.isArray(state?.equipment)?state.equipment:[]}].concat(h.map((x,i)=>({key:`history:${x.id||i}`,legacyKey:'history-'+i,label:(i===0?'האימון האחרון · ':'')+(x?.date||`אימון ${i+1}`),equipment:Array.isArray(x?.equipment)?x.equipment:[]})))}
   function selectedInfo(){const opts=workoutOptions();return opts.find(x=>x.key===selectedWorkout)||opts[0]||{key:'current',label:'האימון הנוכחי',equipment:[]}}
   function allData(){try{return JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}')}catch{return {}}}
   function getSelected(){const all=allData(),info=selectedInfo(),d=all[selectedWorkout]||all[info.legacyKey];return d&&Array.isArray(d.attending)&&Array.isArray(d.absent)?d:{attending:[],absent:[],raw:''}}
@@ -305,6 +307,6 @@
     if(button.hasAttribute('data-transfer'))openTransfer(encodeURIComponent(button.dataset.transfer));
   });
   document.getElementById('noShowWarnings')?.addEventListener('change',e=>{const input=e.target.closest('input[data-asked]');if(input)setAsked(input.dataset.asked,input.checked)});
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.3.10');appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.3.11');appTitle.append(' ',version)}
 })();
 

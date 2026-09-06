@@ -36,7 +36,8 @@
   function registerWorker(){
     if(!('serviceWorker' in navigator))return;
     let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload()});
-    navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(registration=>{
+    navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(registration=>{
+      registration.update().catch(()=>{});
       if(registration.waiting)addUpdateButton(registration);
       registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)addUpdateButton(registration)})});
     }).catch(()=>announce('האפליקציה פועלת, אך מצב לא־מקוון אינו זמין כרגע.','error'));
