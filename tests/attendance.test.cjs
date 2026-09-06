@@ -133,6 +133,22 @@ test('asked state persists and transferring equipment changes the real holder',(
   assert.equal(ctx.state.equipment[0].assignments[0].name,'איתי כהן');
   assert.equal(a.noShowsWithGear().length,0);
 });
+test('transferring to an existing summary person merges their equipment assignment',()=>{
+  const {api:a,ctx,data,elements}=harness();
+  data.set(AK,JSON.stringify({current:{attending:[],absent:['גרובמן']}}));
+  ctx.state.equipment=[{id:'stretcher',name:'אלונקה',assignments:[{name:'גרובמן',qty:1,units:[0]},{name:'איתי',qty:1,units:[1]}]}];
+  elements.attendanceResults={innerHTML:''};elements.noShowWarnings={innerHTML:''};
+  assert.equal(a.transferEquipment('גרובמן','איתי'),true);
+  assert.equal(ctx.state.equipment[0].assignments.length,1);
+  assert.equal(ctx.state.equipment[0].assignments[0].name,'איתי');
+  assert.equal(ctx.state.equipment[0].assignments[0].qty,2);
+  assert.equal(ctx.state.equipment[0].assignments[0].units.join(','),'0,1');
+});
+test('transfer UI offers an existing summary person or a new typed name',()=>{
+  assert.match(source,/מישהו שכבר בסיכום/);
+  assert.match(source,/מישהו חדש/);
+  assert.match(source,/העבר ועדכן סיכום/);
+});
 test('two similar equipment names are reported as ambiguous instead of guessed',()=>{
   const {api:a,ctx,data,elements}=harness();
   data.set(AK,JSON.stringify({current:{attending:[],absent:['רועי']}}));
@@ -158,19 +174,19 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v53'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v54'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v53');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v54');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
-  assert.ok(a.ASSETS.includes('./attendance.js?v=13'));assert.ok(html.includes('./attendance.js?v=13'));
+  assert.ok(a.ASSETS.includes('./attendance.js?v=14'));assert.ok(html.includes('./attendance.js?v=14'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v52'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v53'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v53'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v54'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
-  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=13'));
-  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v52']);
+  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=14'));
+  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v53']);
   cache.set('./index.html',new Response('<body>offline shell</body>'));
   events.fetch({request:{method:'GET',mode:'navigate',url:'https://example.test/app'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/offline shell/);
   const request={method:'GET',mode:'cors',url:'https://example.test/app.js'};cache.set(request,new Response('cached asset'));events.fetch({request,respondWith:p=>pending=p});assert.equal(await (await pending).text(),'cached asset');
