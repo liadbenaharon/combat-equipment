@@ -1,47 +1,57 @@
-# Android / Google Play test build
+# Android / Google Play
 
-ה־Web/PWA כבר פרוס ב־HTTPS. התיקייה הזו מכינה את עטיפת ה־Trusted Web Activity (TWA) בלי להכניס לריפו מפתחות חתימה, סיסמאות או סודות.
+זוהי מעטפת Android אמיתית מסוג Trusted Web Activity לאפליקציית ה־PWA.
 
-## הגדרות קבועות
+## הגדרות
 
-- Application ID מומלץ: `com.liadbenaharon.combatequipment`
-- כתובת ההשקה: `https://liadbenaharon.github.io/combat-equipment/`
-- גרסת Android נוכחית: `2.3.12` / version code `242`
-- ללא הרשאות, analytics או notifications שאינם נדרשים על ידי האפליקציה.
-- תצורת Bubblewrap מוכנה בקובץ [`twa-manifest.example.json`](twa-manifest.example.json).
+- Application ID: `com.liadbenaharon.combatequipment`
+- כתובת: `https://liadbenaharon.github.io/combat-equipment/`
+- גרסה: `2.3.13` / version code `243`
+- `compileSdk` ו־`targetSdk`: API 36
+- מינימום: Android 7.0 / API 24
+- הרשאה יחידה: גישה לאינטרנט
+- ללא analytics, פרסום, חשבון, התראות או הרשאות אנשי קשר/מיקום/קבצים
 
-## יצירת הפרויקט ובניית AAB
+## בנייה מקומית
 
-יש לבצע במחשב עם Node.js, Java, Android SDK ו־Android Studio:
+פתחו את התיקייה `android` ב־Android Studio, התקינו Android SDK 36 ובנו `bundleRelease`. לחלופין, עם Java 17, Android SDK ו־Gradle 8.11.1:
 
-```powershell
-npm install --global @bubblewrap/cli
-New-Item -ItemType Directory -Force android-build | Out-Null
-Set-Location android-build
-bubblewrap init --manifest https://liadbenaharon.github.io/combat-equipment/manifest.webmanifest
+```bash
+cd android
+gradle bundleRelease
 ```
 
-במהלך האתחול יש לבחור את ה־Application ID שמופיע למעלה, או להעתיק את הערכים מ־`twa-manifest.example.json`. את שדות `signingKey` שבקובץ הדוגמה יש להחליף בנתיב וב־alias אמיתיים, או לתת ל־Bubblewrap ליצור מפתח חדש. אין להעתיק את ערכי ה־placeholder כמו שהם. לאחר מכן:
+ללא משתני חתימה ייווצר AAB לא חתום לבדיקה. לבניית AAB חתום הגדירו:
 
-```powershell
-bubblewrap update
-bubblewrap build
-```
+- `ANDROID_KEYSTORE_PATH`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
 
-הפקודה `build` מייצרת את ה־AAB. יש ליצור או לבחור מפתח upload מאובטח, לשמור אותו מחוץ לריפו, ולהעלות ל־Play Console עם Play App Signing. אין להכניס קובץ keystore או סיסמה ל־Git.
+אין לשמור keystore או סיסמאות ב־Git.
 
-## Digital Asset Links — שלב חובה ל־TWA ללא סרגל דפדפן
+## בנייה אוטומטית
 
-אחרי יצירת ה־AAB, להעתיק את `assetlinks.template.json`, להחליף את טביעת ה־SHA-256 בטביעת **App signing certificate** שמוצגת ב־Play Console, ולפרסם אותו בכתובת המדויקת:
+ה־workflow בשם **Android AAB** בונה ומעלה artifact מכל שינוי בתיקיית Android, ואפשר להפעילו ידנית. אם מוסיפים ל־GitHub Actions את ארבעת הסודות הבאים, ה־AAB ייחתם אוטומטית:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+`ANDROID_KEYSTORE_BASE64` הוא קובץ ה־keystore כולו בקידוד Base64. מפתח החתימה והסיסמאות אינם חלק מהמאגר.
+
+## Digital Asset Links — חובה לפני פרסום
+
+לאחר הפעלת Play App Signing, העתיקו את טביעת SHA-256 של **App signing certificate** מ־Play Console, החליפו את הערך ב־[`assetlinks.template.json`](assetlinks.template.json), ופרסמו את הקובץ בכתובת המדויקת:
 
 `https://liadbenaharon.github.io/.well-known/assetlinks.json`
 
-חשוב: מאחר שהאפליקציה הנוכחית מתארחת ב־GitHub Project Pages תחת `/combat-equipment/`, הקובץ שבתוך הפרויקט יופיע תחת `/combat-equipment/.well-known/` ולא יעמוד בדרישת Android. לכן נדרש אתר־שורש/דומיין בשליטת המפרסם (או מעבר של ה־PWA לדומיין כזה) כדי להשלים אימות TWA. ללא אימות, ניתן לבדוק עטיפת WebView/Custom Tab, אך היא אינה תחליף מומלץ ל־TWA מאומת.
+הקובץ חייב להיות בשורש הדומיין. כתובת תחת `/combat-equipment/.well-known/` אינה מספיקה. לכן צריך לפרסם אותו במאגר GitHub Pages הראשי `liadbenaharon.github.io` או להעביר את האתר לדומיין שבשליטת המפרסם. עד שהקישור יאומת, האפליקציה עשויה להיפתח כ־Custom Tab עם סרגל דפדפן במקום כ־TWA מלא.
 
-## בדיקת release לפני העלאה
+## לפני Production
 
-1. לפתוח את ה־AAB ב־Android Studio ולוודא שאין הרשאות מיותרות.
-2. להתקין Internal test על מכשיר Android אמיתי, לבדוק cold launch, offline, Back, rotation, גופנים גדולים, TalkBack ועדכון עם נתונים קיימים.
-3. לוודא שה־Digital Asset Links מאומתים ושאין סרגל כתובת ב־TWA.
-4. להעלות קודם ל־Internal testing ולפתור את כל ממצאי ה־Pre-launch report.
-
+1. לבנות AAB חתום ולעלות קודם ל־Internal testing.
+2. לוודא שאין סרגל כתובת וש־Digital Asset Links אומתו.
+3. לבדוק מצב לא מקוון, חזרה, סיבוב, הגדלת גופן, TalkBack ושמירת נתונים לאחר עדכון.
+4. להשלים את הקבצים בתיקיית `play-store` ואת כל הצהרות Play Console.

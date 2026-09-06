@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.3\.12'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.3\.13'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.3.12');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.3.13');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -90,13 +90,26 @@ test('ambiguous attendance names get an explicit manual-review state',()=>{
 test('Google Play wrapper preparation stays aligned with the web release',()=>{
   const web=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
   const twa=JSON.parse(fs.readFileSync(path.join(root,'android','twa-manifest.example.json'),'utf8'));
+  const gradle=fs.readFileSync(path.join(root,'android','app','build.gradle'),'utf8');
+  const androidManifest=fs.readFileSync(path.join(root,'android','app','src','main','AndroidManifest.xml'),'utf8');
+  const workflow=fs.readFileSync(path.join(root,'.github','workflows','android-aab.yml'),'utf8');
   assert.equal(web.start_url,'/combat-equipment/');
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.3.12');
-  assert.equal(twa.appVersionCode,242);
+  assert.equal(twa.appVersion,'2.3.13');
+  assert.equal(twa.appVersionCode,243);
   assert.equal(twa.enableNotifications,false);
+  assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
+  assert.match(gradle,/compileSdk 36/);
+  assert.match(gradle,/targetSdk 36/);
+  assert.match(gradle,/versionCode 243/);
+  assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
+  assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
+  assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
+  assert.match(androidManifest,/android:host="liadbenaharon\.github\.io"/);
+  assert.match(androidManifest,/android:pathPrefix="\/combat-equipment\/"/);
+  assert.match(workflow,/bundleRelease/);
   assert.match(fs.readFileSync(path.join(root,'android','README.md'),'utf8'),/Digital Asset Links/);
 });
 

@@ -8,7 +8,7 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 - [x] Maskable-capable 512 icon with an opaque background and safe central artwork.
 - [x] Offline app shell and navigation fallback.
 - [x] Controlled service-worker update prompt and cache cleanup.
-- [x] Central app/cache version and visible `v2.3.5`.
+- [x] Central app/cache version and visible `v2.3.13`.
 - [x] Backward-compatible data normalization and stable history ids.
 - [x] Local JSON backup/restore with validation and rollback on failed import.
 - [x] Privacy page, offline status, storage error feedback, keyboard dialog close, focus visibility, reduced-motion support, touch targets, safe areas, and narrow-screen adjustments.
@@ -22,16 +22,15 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 - [ ] Upgrade from the previously installed PWA with real existing data and confirm the update banner, history, attendance, and unresolved return debts remain intact.
 - [ ] Test backup download, restore on a second browser profile, Hebrew RTL layout, rotation, system font scaling, and 320/360/412 px widths.
 
-## Android wrapper required outside this repository
+## Android wrapper
 
-The repository now includes a copy-ready Bubblewrap configuration and release guide in [`android/`](android/). It fixes the recommended application id, production start URL, icon URLs, version code, and no-notification/no-analytics defaults. The signed bundle and certificate values must still be created by the publisher.
+The repository now includes a buildable Android Browser Helper TWA project in [`android/`](android/), targeting API 36 with a stable package id, production URL, no analytics, and only the Internet permission. GitHub Actions can build the AAB and can sign it when the publisher supplies protected repository secrets. The signing identity and Play Console steps must still be completed by the publisher.
 
-1. Choose a unique Android application id (for example `com.example.combatequipment`; this must be owned and finalized by the publisher).
-2. Generate a Trusted Web Activity project with Bubblewrap or Android Studio, targeting the production HTTPS start URL and current Play target SDK requirements.
-3. Create and securely retain the Android upload/signing keys. Never commit private keys or passwords.
-4. Add a valid Digital Asset Links file at `https://liadbenaharon.github.io/.well-known/assetlinks.json`, containing the final application id and SHA-256 signing certificate fingerprint. A project-path file under `/combat-equipment/` is not sufficient. If the root GitHub Pages site cannot host it, use a domain you control.
-5. Build a signed Android App Bundle (`.aab`) and verify the TWA opens without the browser address bar. If asset links are unavailable, use a normal WebView wrapper and complete the additional security/review work it requires.
-6. Test Android back navigation, process death/relaunch, offline startup, app update, orientation, large fonts, TalkBack, and at least the minimum and latest supported Android versions.
+1. Confirm the reserved application id `com.liadbenaharon.combatequipment` before the first Play upload; it cannot be changed after publication.
+2. Create and securely retain the Android upload key. Never commit private keys or passwords.
+3. Add a valid Digital Asset Links file at `https://liadbenaharon.github.io/.well-known/assetlinks.json`, containing the final application id and SHA-256 signing certificate fingerprint. A project-path file under `/combat-equipment/` is not sufficient. If the root GitHub Pages site cannot host it, use a domain you control.
+4. Build a signed Android App Bundle (`.aab`) with Android Studio, Gradle, or the **Android AAB** workflow and verify the TWA opens without the browser address bar.
+5. Test Android back navigation, process death/relaunch, offline startup, app update, orientation, large fonts, TalkBack, and at least the minimum and latest supported Android versions.
 
 ## Play Console work required outside this repository
 

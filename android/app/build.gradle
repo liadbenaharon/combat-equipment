@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+def signingValues = [
+    System.getenv('ANDROID_KEYSTORE_PATH'),
+    System.getenv('ANDROID_KEYSTORE_PASSWORD'),
+    System.getenv('ANDROID_KEY_ALIAS'),
+    System.getenv('ANDROID_KEY_PASSWORD')
+]
+def hasReleaseSigning = signingValues.every { it != null && !it.trim().isEmpty() }
+
+android {
+    namespace 'com.liadbenaharon.combatequipment'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.liadbenaharon.combatequipment'
+        minSdk 24
+        targetSdk 36
+        versionCode 243
+        versionName '2.3.13'
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(System.getenv('ANDROID_KEYSTORE_PATH'))
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.3'
+}
