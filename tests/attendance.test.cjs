@@ -13,7 +13,7 @@ function harness(seed={}){
   const ctx={localStorage,document:{getElementById:id=>elements[id]||null,querySelectorAll:()=>[]},window:{location:{href:''}},navigator:{clipboard:{writeText:async s=>clipboard.push(s)}},alert:s=>alerts.push(s),prompt:(...a)=>prompts.push(a),confirm:()=>true,esc:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),state:{equipment:[]}};
   vm.createContext(ctx);
   // Exercise production functions without booting the DOM observer or page UI.
-  vm.runInContext(source.slice(0,source.indexOf('  let observerBusy='))+`\nwindow.test={normalizePhone,makeContact,parseContacts,validateContacts,readContacts,writeContacts,contactPhone,parseList,statusOf,similarName,analyzeNoShowsWithGear,noShowsWithGear,openWhatsApp,copyMessage,checkAssignedNoShows,deleteSelectedContacts,selectedContacts,updateContactSelection,clearContactSelection,renderContacts,select:key=>selectedWorkout=key};})();`,ctx);
+  vm.runInContext(source.slice(0,source.indexOf('  let observerBusy='))+`\nwindow.test={normalizePhone,makeContact,parseContacts,validateContacts,readContacts,writeContacts,contactPhone,parseList,statusOf,similarName,analyzeNoShowsWithGear,noShowsWithGear,wasAsked,setAsked,transferEquipment,openWhatsApp,copyMessage,checkAssignedNoShows,deleteSelectedContacts,selectedContacts,updateContactSelection,clearContactSelection,renderContacts,select:key=>selectedWorkout=key};})();`,ctx);
   return {api:ctx.window.test,ctx,data,elements,alerts,prompts,clipboard};
 }
 test('phone normalization: local, international, punctuation, invalid input',()=>{
@@ -107,6 +107,32 @@ test('attendance safely matches surnames and one-letter Hebrew spelling variants
   assert.equal(a.similarName('רואי','רועי'),true);
   assert.equal(a.noShowsWithGear().map(person=>person.name).join('|'),'גרובמן|רואי');
 });
+test('name matching accepts a surname prefix but does not confuse Yoni and Doni',()=>{
+  const {api:a,ctx,data}=harness();
+  data.set(AK,JSON.stringify({current:{attending:[],absent:['שי גרוב','דוני']}}));
+  ctx.state.equipment=[{id:'water',name:'מים',assignments:[{name:'שי גרובמן',qty:1},{name:'יוני',qty:1},{name:'דוני',qty:1}]}];
+  assert.equal(a.similarName('שי גרוב','שי גרובמן'),true);
+  assert.equal(a.similarName('יוני','דוני'),false);
+  assert.equal(a.noShowsWithGear().map(person=>person.name).join('|'),'שי גרובמן|דוני');
+});
+test('a first name alone is ambiguous only when multiple matching holders exist',()=>{
+  const {api:a,ctx,data}=harness();
+  data.set(AK,JSON.stringify({current:{attending:[],absent:['שי']}}));
+  ctx.state.equipment=[{id:'water',name:'מים',assignments:[{name:'שי גרובמן',qty:1},{name:'שי אטיאס',qty:1},{name:'יוני',qty:1}]}];
+  const result=a.analyzeNoShowsWithGear();
+  assert.equal(result.people.length,0);assert.equal(result.ambiguities.length,1);
+  assert.equal(result.ambiguities[0].names.join('|'),'שי גרובמן|שי אטיאס');
+});
+test('asked state persists and transferring equipment changes the real holder',()=>{
+  const {api:a,ctx,data,elements}=harness();
+  data.set(AK,JSON.stringify({current:{attending:[],absent:['שי גרובמן']}}));
+  ctx.state.equipment=[{id:'water',name:'מים',assignments:[{name:'שי גרובמן',qty:2,units:[0,1]}]}];
+  elements.attendanceResults={innerHTML:''};elements.noShowWarnings={innerHTML:''};
+  a.setAsked('שי גרובמן',true);assert.equal(a.wasAsked('שי גרובמן'),true);
+  assert.equal(a.transferEquipment('שי גרובמן','איתי כהן'),true);
+  assert.equal(ctx.state.equipment[0].assignments[0].name,'איתי כהן');
+  assert.equal(a.noShowsWithGear().length,0);
+});
 test('two similar equipment names are reported as ambiguous instead of guessed',()=>{
   const {api:a,ctx,data,elements}=harness();
   data.set(AK,JSON.stringify({current:{attending:[],absent:['רועי']}}));
@@ -132,19 +158,19 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v52'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v53'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v52');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v53');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
-  assert.ok(a.ASSETS.includes('./attendance.js?v=12'));assert.ok(html.includes('./attendance.js?v=12'));
+  assert.ok(a.ASSETS.includes('./attendance.js?v=13'));assert.ok(html.includes('./attendance.js?v=13'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v51'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v52'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v52'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v53'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
-  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=12'));
-  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v51']);
+  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=13'));
+  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v52']);
   cache.set('./index.html',new Response('<body>offline shell</body>'));
   events.fetch({request:{method:'GET',mode:'navigate',url:'https://example.test/app'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/offline shell/);
   const request={method:'GET',mode:'cors',url:'https://example.test/app.js'};cache.set(request,new Response('cached asset'));events.fetch({request,respondWith:p=>pending=p});assert.equal(await (await pending).text(),'cached asset');
