@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.1'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.2'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.1');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.2');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.1');
-  assert.equal(twa.appVersionCode,251);
+  assert.equal(twa.appVersion,'2.4.2');
+  assert.equal(twa.appVersionCode,252);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 251/);
+  assert.match(gradle,/versionCode 252/);
   assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
@@ -130,11 +130,11 @@ test('attendance and returns use stable history ids and finish moves current att
   assert.match(returns,/attendance\[`history:\$\{id\}`\]=attendance\.current/);assert.match(returns,/delete attendance\.current/);assert.match(returns,/CombatData\.transaction/);
 });
 
-test('open historical debts stay visible and can be transferred from history',()=>{
+test('open historical debts transfer into the next equipment cards and remain transferable from history',()=>{
   const attendance=fs.readFileSync(path.join(root,'attendance.js'),'utf8'),returns=fs.readFileSync(path.join(root,'returns.js'),'utf8'),history=fs.readFileSync(path.join(root,'history-collapse.js'),'utf8');
-  assert.match(returns,/panel\.innerHTML=`<div id="carryOverList"><\/div><div class="return-launch">/);
-  assert.match(returns,/data-debt-transfer/);assert.match(history,/history-transfer/);assert.match(history,/combatOpenHistoryTransfer/);
-  assert.match(attendance,/historicalReturnData/);assert.match(attendance,/openSlots/);
+  assert.doesNotMatch(returns,/panel\.innerHTML=`<div id="carryOverList">/);assert.match(returns,/carryEquipment\(id,current\)/);
+  assert.match(history,/history-transfer/);assert.match(history,/combatOpenHistoryTransfer/);
+  assert.match(attendance,/historicalReturnData/);assert.match(attendance,/syncCarriedTransfer/);assert.match(attendance,/openSlots/);
 });
 
 test('cloud schema enforces coach isolation and an explicit admin role',()=>{

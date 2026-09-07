@@ -87,9 +87,25 @@
   function historicalReturnData(historyItem,historyIndex){
     try{const all=JSON.parse(localStorage.getItem(RETURN_KEY)||'{}'),key=`history:${historyItem?.id||historyIndex}`;return all[key]||all[`history-${historyIndex}`]||{}}catch{return {}}
   }
+  function syncCarriedTransfer(historyItem,moves,fromName,toName){
+    if(!historyItem||!Array.isArray(state?.equipment)||!moves.length)return false;let changed=false;
+    for(const move of moves){
+      const eq=state.equipment.find(item=>String(item.id)===String(move.eqId));if(!eq)continue;const movedSet=new Set(move.slots),next=[];
+      for(const assignment of eq.assignments||[]){
+        const sameOrigin=String(assignment.carriedFromWorkoutId||'')===String(historyItem.id||''),samePerson=norm(assignment.name)===norm(fromName),units=Array.isArray(assignment.units)?assignment.units:[];
+        if(!sameOrigin||!samePerson){next.push(assignment);continue}
+        const transferred=units.filter(i=>movedSet.has(i)),remaining=units.filter(i=>!movedSet.has(i));
+        if(remaining.length)next.push({...assignment,qty:remaining.length,units:remaining});
+        if(transferred.length){next.push({...assignment,name:toName,qty:transferred.length,units:transferred});changed=true}
+      }
+      eq.assignments=next;
+    }
+    if(changed){if(typeof rememberTrainee==='function')rememberTrainee(toName);if(typeof pruneTraineeIfUnused==='function')pruneTraineeIfUnused(fromName);if(typeof save==='function')save()}
+    return changed;
+  }
   function transferEquipment(fromName,toName){
     fromName=clean(fromName);toName=clean(toName);if(!fromName||!toName||norm(fromName)===norm(toName))return false;
-    const history=selectedWorkout==='current'?null:historyItems(),historyIndex=history?.findIndex((x,i)=>`history:${x.id||i}`===selectedWorkout)??-1,historyItem=historyIndex>=0?history[historyIndex]:null,equipment=selectedWorkout==='current'?(state.equipment||[]):(historyItem?.equipment||[]),returnData=historyItem?historicalReturnData(historyItem,historyIndex):{},gearBefore=[];let changed=false;
+    const history=selectedWorkout==='current'?null:historyItems(),historyIndex=history?.findIndex((x,i)=>`history:${x.id||i}`===selectedWorkout)??-1,historyItem=historyIndex>=0?history[historyIndex]:null,equipment=selectedWorkout==='current'?(state.equipment||[]):(historyItem?.equipment||[]),returnData=historyItem?historicalReturnData(historyItem,historyIndex):{},gearBefore=[],movedHistorical=[];let changed=false;
     equipment.forEach(eq=>{
       const assignments=eq.assignments||[],sources=assignments.filter(a=>norm(a.name)===norm(fromName));if(!sources.length)return;
       if(!historyItem){
@@ -109,7 +125,7 @@
       if(!movedSlots.length)return;
       let target=next.find(a=>norm(a.name)===norm(toName));
       if(target){target.units=[...new Set([...(target.units||[]),...movedSlots])].sort((a,b)=>a-b);target.qty=target.units.length}else next.push({name:toName,qty:movedSlots.length,units:[...movedSlots].sort((a,b)=>a-b)});
-      eq.assignments=next;gearBefore.push({name:eq.name,qty:movedSlots.length});changed=true;
+      eq.assignments=next;gearBefore.push({name:eq.name,qty:movedSlots.length});movedHistorical.push({eqId:eq.id,slots:movedSlots});changed=true;
     });
     if(!changed)return false;
     if(selectedWorkout==='current'){
@@ -118,7 +134,7 @@
       if(typeof save==='function')save();
       if(typeof renderAll==='function')renderAll();
     }else{
-      if(historyItem){const people={};equipment.forEach(eq=>(eq.assignments||[]).forEach(a=>{(people[a.name]??=[]).push({name:eq.name,qty:Number(a.qty||0)})}));historyItem.people=Object.entries(people).map(([name,items])=>({name,items}));localStorage.setItem('combatEquipmentHistoryV1',JSON.stringify(history));if(typeof renderHistory==='function')renderHistory();window.renderCombatReturns?.()}
+      if(historyItem){const people={};equipment.forEach(eq=>(eq.assignments||[]).forEach(a=>{(people[a.name]??=[]).push({name:eq.name,qty:Number(a.qty||0)})}));historyItem.people=Object.entries(people).map(([name,items])=>({name,items}));localStorage.setItem('combatEquipmentHistoryV1',JSON.stringify(history));syncCarriedTransfer(historyItem,movedHistorical,fromName,toName);if(typeof renderHistory==='function')renderHistory();window.renderCombatReturns?.()}
     }
     recordTransfer(fromName,toName,gearBefore);renderAttendance();return true;
   }
@@ -338,6 +354,6 @@
     if(button.hasAttribute('data-transfer'))openTransfer(encodeURIComponent(button.dataset.transfer));
   });
   document.getElementById('noShowWarnings')?.addEventListener('change',e=>{const input=e.target.closest('input[data-asked]');if(input)setAsked(input.dataset.asked,input.checked)});
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.4.1');appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.4.2');appTitle.append(' ',version)}
 })();
 

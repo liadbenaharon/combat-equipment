@@ -4,7 +4,7 @@ const ASSETS=[
   './','./index.html','./manifest.webmanifest','./privacy.html','./delete-account.html',
   './icon-192.png','./icon-512.png','./app-theme.css?v=5','./app-config.js?v=9','./cloud-config.js?v=1','./cloud-bundle.js?v=1','./data-safety.js?v=3',
   './equipment-icons.js?v=7','./quantity-shortcut.js?v=2','./history-collapse.js?v=3',
-  './attendance.js?v=19','./contacts-count.js?v=6','./returns.js?v=4','./app-lifecycle.js?v=7','./native-ui.js?v=4'
+  './attendance.js?v=20','./contacts-count.js?v=6','./returns.js?v=5','./app-lifecycle.js?v=7','./native-ui.js?v=4'
 ];
 
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
