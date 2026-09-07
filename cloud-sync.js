@@ -161,9 +161,9 @@ function watchStorage(){
 
 async function onSession(session){
   user=session?.user||null;profile=null;activeOwner=null;pendingMigration=false;
-  if(!user){signedOutUi();return}
-  try{await loadProfile();if(!await openRememberedAdminWorkspace())await openOwnWorkspace();await signedInUi()}
-  catch(error){announce('לא ניתן לפתוח את החשבון: '+error.message,'error');signedOutUi()}
+  if(!user){signedOutUi();window.dispatchEvent(new CustomEvent('combat-cloud-ready'));return}
+  try{await loadProfile();if(!await openRememberedAdminWorkspace())await openOwnWorkspace();await signedInUi();window.dispatchEvent(new CustomEvent('combat-cloud-ready'))}
+  catch(error){announce('לא ניתן לפתוח את החשבון: '+error.message,'error');signedOutUi();window.dispatchEvent(new CustomEvent('combat-cloud-ready'))}
 }
 
 async function start(){

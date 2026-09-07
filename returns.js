@@ -1,6 +1,6 @@
 // Smart equipment return center: per-workout returns + automatic carry-over of unresolved gear.
 (function(){
-  const RETURN_KEY='combatEquipmentReturnsV1',ATTENDANCE_KEY='combatEquipmentAttendanceV2',HISTORY_KEY='combatEquipmentHistoryV1';
+  const RETURN_KEY='combatEquipmentReturnsV1',ATTENDANCE_KEY='combatEquipmentAttendanceV2',HISTORY_KEY='combatEquipmentHistoryV1',CARRY_MARK='__carriedIntoCurrentV1';
   const norm=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim().replace(/\s+/g,' ').toLocaleLowerCase('he');
   let returnMode=false,view='people',missingOnly=true,selectedWorkout='current';
   const historyItems=()=>{try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}};
@@ -25,13 +25,25 @@
   const slotsReturned=(eq,slots)=>slots.filter(i=>isBack(eq,i)).length;
   function activeSlots(eq){const slots=new Set();(eq.checked||[]).forEach((checked,i)=>{if(checked)slots.add(i)});allocation(eq).forEach(a=>{if(!a.unassigned)a.slots.forEach(i=>slots.add(i))});return [...slots].sort((a,b)=>a-b)}
   function missingCurrent(){const old=selectedWorkout;selectedWorkout='current';const out=(state.equipment||[]).map(eq=>({eq,nums:activeSlots(eq).filter(i=>!isBack(eq,i))})).filter(x=>x.nums.length);selectedWorkout=old;return out}
-  function carryEquipment(workoutId,returnData){
-    return (state.equipment||[]).map(eq=>{
+  function carryEquipmentFrom(equipment,workoutId,returnData){
+    return (equipment||[]).map(eq=>{
       const missing=activeSlots(eq).filter(i=>!returnData[slotKey(eq,i)]),missingSet=new Set(missing);
       const assignments=allocation(eq).filter(a=>!a.unassigned).map(a=>{const units=a.slots.filter(i=>missingSet.has(i));return units.length?{name:a.name,qty:units.length,units,carriedFromWorkoutId:workoutId}:null}).filter(Boolean);
       const checked=Array.from({length:Number(eq.qty||0)},(_,i)=>missingSet.has(i));
       return {...eq,checked,assignments};
     });
+  }
+  const carryEquipment=(workoutId,returnData)=>carryEquipmentFrom(state.equipment,workoutId,returnData);
+  function hasActiveEquipment(equipment){return (equipment||[]).some(eq=>activeSlots(eq).length>0)}
+  function mergeCarriedEquipment(current,carried){const byId=new Map((carried||[]).map(eq=>[String(eq.id),eq]));const merged=(current||[]).map(eq=>{const debt=byId.get(String(eq.id));if(!debt)return eq;byId.delete(String(eq.id));const qty=Math.max(Number(eq.qty||0),Number(debt.qty||0));return {...eq,qty,checked:Array.from({length:qty},(_,i)=>Boolean(debt.checked[i])),assignments:debt.assignments}});return merged.concat([...byId.values()])}
+  function recoverOutstandingFromHistory(){
+    if(hasActiveEquipment(state.equipment))return false;const all=readAll(),history=historyItems();
+    let source=null;
+    for(let index=0;index<history.length;index++){const item=history[index],key=`history:${item.id||index}`,returns=all[key]||all[`history-${index}`]||{};if(returns[CARRY_MARK])continue;if(carryEquipmentFrom(item.equipment,item.id||index,returns).some(eq=>activeSlots(eq).length)){source={item,index,key,returns};break}}
+    if(!source)return false;
+    const carried=carryEquipmentFrom(source.item.equipment,source.item.id||source.index,source.returns),nextState={...state,equipment:mergeCarriedEquipment(state.equipment,carried)},nextReturns={...all,[source.key]:{...source.returns,[CARRY_MARK]:true}};
+    if(!CombatData.transaction({[RETURN_KEY]:nextReturns,combatEquipmentStateV1:nextState}))return false;
+    state=nextState;renderAll?.();window.dispatchEvent?.(new CustomEvent('combat-carry-recovered',{detail:{workoutId:source.item.id}}));return true;
   }
   function setAll(value){const d=read();selectedEquipment().forEach(eq=>activeSlots(eq).forEach(i=>d[slotKey(eq,i)]=value));write(d);renderReturns()}
   function stepEq(eq,delta){const slots=activeSlots(eq);if(delta>0){const i=slots.find(i=>!isBack(eq,i));if(i!==undefined)setSlots(eq,[i],true)}else{const i=[...slots].reverse().find(i=>isBack(eq,i));if(i!==undefined)setSlots(eq,[i],false)}renderReturns()}
@@ -81,7 +93,7 @@
     if(!confirm(missingCount?'לשמור את האימון ולהתחיל אימון חדש עם הציוד שעדיין נמצא אצל המתאמנים?':'כל הציוד הוחזר. לשמור את האימון ולהתחיל אימון חדש?'))return;
     const people={};state.equipment.forEach(e=>e.assignments.forEach(a=>{(people[a.name]??=[]).push({name:e.name,qty:a.qty})}));
     const id=Date.now(),h=historyItems();h.unshift({id,date:new Intl.DateTimeFormat('he-IL',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),total:state.equipment.reduce((n,e)=>n+e.qty,0),people:Object.entries(people).map(([name,items])=>({name,items})),equipment:structuredClone(state.equipment)});
-    const all=readAll(),current=all.current||{};all[`history:${id}`]=current;delete all.current;
+    const all=readAll(),current=all.current||{};all[`history:${id}`]={...current,[CARRY_MARK]:true};delete all.current;
     let attendance={};try{attendance=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}')}catch{}if(attendance.current){attendance[`history:${id}`]=attendance.current;delete attendance.current}
     const nextState={...state,equipment:carryEquipment(id,current)};
     if(!CombatData.transaction({[HISTORY_KEY]:h.slice(0,100),[RETURN_KEY]:all,[ATTENDANCE_KEY]:attendance,combatEquipmentStateV1:nextState})){alert('האימון לא נשמר. לא בוצע שינוי בנתונים; נסו לפנות מקום במכשיר ולנסות שוב.');return}
@@ -89,5 +101,5 @@
   }
 
   window.combatReturnMissing=missingCurrent;window.renderCombatReturns=renderReturns;window.combatOpenReturnMode=()=>{returnMode=true;document.querySelector('[data-tab="check"]')?.click();renderReturns();returnPanel?.scrollIntoView({behavior:'smooth',block:'start'})};window.combatConfirmFinish=()=>true;window.combatResetReturns=()=>{};window.combatDeleteReturnWorkout=historyId=>{const all=readAll();delete all[`history:${historyId}`];writeAll(all);if(selectedWorkout===`history:${historyId}`)selectedWorkout='current';renderReturns()};
-  ensureUI();if(window.finishBtn)finishBtn.onclick=finishWorkout;renderReturns();window.addEventListener('storage',()=>{renderReturns();decorateAbsent()});document.addEventListener('click',()=>setTimeout(decorateAbsent,0));
+  ensureUI();if(window.finishBtn)finishBtn.onclick=finishWorkout;renderReturns();setTimeout(recoverOutstandingFromHistory,0);window.addEventListener('combat-cloud-ready',recoverOutstandingFromHistory);window.addEventListener('storage',()=>{renderReturns();decorateAbsent()});document.addEventListener('click',()=>setTimeout(decorateAbsent,0));
 })();
