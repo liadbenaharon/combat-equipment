@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.5'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.6'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.5');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.6');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.5');
-  assert.equal(twa.appVersionCode,255);
+  assert.equal(twa.appVersion,'2.4.6');
+  assert.equal(twa.appVersionCode,256);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 255/);
+  assert.match(gradle,/versionCode 256/);
   assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
@@ -119,9 +119,17 @@ test('cloud client points at the active Supabase project hostname',()=>{
   assert.doesNotMatch(config,/rryvwztjbvsczyamrtu/);
 });
 
+test('cloud authentication loads data without a reload loop',()=>{
+  const source=fs.readFileSync(path.join(root,'cloud-sync.js'),'utf8');
+  assert.match(source,/function refreshAppFromLocal\(\)/);
+  assert.match(source,/combat-cloud-data-loaded/);
+  assert.doesNotMatch(source,/location\.reload\(/);
+  assert.match(source,/nextSession\.user\.id!==user\?\.id/);
+});
+
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),theme=fs.readFileSync(path.join(root,'app-theme.css'),'utf8');
-  assert.match(html,/app-theme\.css\?v=6/);assert.match(html,/app-config\.js\?v=11/);assert.match(html,/native-ui\.js\?v=5/);assert.match(sw,/app-theme\.css\?v=6/);assert.match(sw,/app-config\.js\?v=11/);assert.match(sw,/native-ui\.js\?v=5/);
+  assert.match(html,/app-theme\.css\?v=6/);assert.match(html,/app-config\.js\?v=12/);assert.match(html,/native-ui\.js\?v=5/);assert.match(sw,/app-theme\.css\?v=6/);assert.match(sw,/app-config\.js\?v=12/);assert.match(sw,/native-ui\.js\?v=5/);
   assert.match(theme,/\.overlay\{z-index:240\}/);assert.match(theme,/\.overlay \.modalBtns\{position:sticky/);
   assert.match(theme,/@media\(max-width:699px\)/);assert.match(theme,/position:fixed/);assert.match(theme,/safe-area-inset-bottom/);
 });

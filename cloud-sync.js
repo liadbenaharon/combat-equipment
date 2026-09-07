@@ -81,6 +81,15 @@ function replaceLocal(data,ownerId,remoteRevision){
   activeOwner=ownerId;revision=remoteRevision;
 }
 
+function refreshAppFromLocal(){
+  try{
+    if(typeof state!=='undefined'&&typeof defaults!=='undefined')state=window.CombatData.loadState(defaults);
+    if(typeof renderAll==='function')renderAll();
+    if(typeof renderAttendance==='function')renderAttendance();
+  }catch(error){announce('הנתונים נטענו, אך רענון התצוגה נכשל: '+error.message,'error')}
+  window.dispatchEvent(new CustomEvent('combat-cloud-data-loaded'));
+}
+
 async function openOwnWorkspace(){
   const remote=await getState(user.id),remoteHasData=remote.data&&Object.keys(remote.data).length>0;
   activeOwner=user.id;revision=remote.revision;
@@ -89,7 +98,7 @@ async function openOwnWorkspace(){
   }
   pendingMigration=false;
   if(remoteHasData&&snapshotText(remote.data)!==snapshotText(snapshot())){
-    replaceLocal(remote.data,user.id,remote.revision);location.reload();return;
+    replaceLocal(remote.data,user.id,remote.revision);refreshAppFromLocal();return;
   }
   localStorage.setItem(WORKSPACE_KEY,user.id);
 }
@@ -102,7 +111,7 @@ async function openRememberedAdminWorkspace(){
     const remote=await getState(remembered);
     activeOwner=remembered;revision=remote.revision;pendingMigration=false;
     if(snapshotText(remote.data)!==snapshotText(snapshot())){
-      replaceLocal(remote.data,remembered,remote.revision);location.reload();
+      replaceLocal(remote.data,remembered,remote.revision);refreshAppFromLocal();
     }
     return true;
   }catch{
@@ -128,7 +137,7 @@ async function switchWorkspace(ownerId){
   if(!confirm('לעבור לסביבת העבודה של המאמן שנבחר?'))return;
   try{
     if(activeOwner&&!pendingMigration)await saveSnapshot(false);
-    const remote=await getState(ownerId);replaceLocal(remote.data,ownerId,remote.revision);location.reload();
+    const remote=await getState(ownerId);replaceLocal(remote.data,ownerId,remote.revision);refreshAppFromLocal();await signedInUi();announce('סביבת המאמן נטענה');
   }catch(error){announce('לא ניתן לפתוח את נתוני המאמן: '+error.message,'error')}
 }
 
@@ -174,7 +183,10 @@ async function start(){
   const {data:{session},error}=await client.auth.getSession();
   if(error)announce('שגיאה בפתיחת החשבון: '+error.message,'error');
   await onSession(session);
-  client.auth.onAuthStateChange((event,nextSession)=>{if(event==='SIGNED_IN'||event==='SIGNED_OUT')setTimeout(()=>onSession(nextSession),0)});
+  client.auth.onAuthStateChange((event,nextSession)=>{
+    if(event==='SIGNED_OUT')setTimeout(()=>onSession(null),0);
+    else if(event==='SIGNED_IN'&&nextSession?.user?.id&&nextSession.user.id!==user?.id)setTimeout(()=>onSession(nextSession),0);
+  });
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
