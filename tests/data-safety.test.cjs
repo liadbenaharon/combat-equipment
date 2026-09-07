@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.3\.13'/);
-  for(const file of ['equipment-icons.js','quantity-shortcut.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.3.13');
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.1'/);
+  for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.1');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.3.13');
-  assert.equal(twa.appVersionCode,243);
+  assert.equal(twa.appVersion,'2.4.1');
+  assert.equal(twa.appVersionCode,251);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 243/);
+  assert.match(gradle,/versionCode 251/);
   assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
@@ -115,7 +115,7 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),theme=fs.readFileSync(path.join(root,'app-theme.css'),'utf8');
-  assert.match(html,/app-theme\.css\?v=5/);assert.match(html,/app-config\.js\?v=8/);assert.match(html,/native-ui\.js\?v=4/);assert.match(sw,/app-theme\.css\?v=5/);assert.match(sw,/app-config\.js\?v=8/);assert.match(sw,/native-ui\.js\?v=4/);
+  assert.match(html,/app-theme\.css\?v=5/);assert.match(html,/app-config\.js\?v=9/);assert.match(html,/native-ui\.js\?v=4/);assert.match(sw,/app-theme\.css\?v=5/);assert.match(sw,/app-config\.js\?v=9/);assert.match(sw,/native-ui\.js\?v=4/);
   assert.match(theme,/@media\(max-width:699px\)/);assert.match(theme,/position:fixed/);assert.match(theme,/safe-area-inset-bottom/);
 });
 
@@ -128,5 +128,25 @@ test('attendance and returns use stable history ids and finish moves current att
   const attendance=fs.readFileSync(path.join(root,'attendance.js'),'utf8'),returns=fs.readFileSync(path.join(root,'returns.js'),'utf8');
   assert.match(attendance,/key:`history:\$\{x\.id\|\|i\}`/);assert.match(attendance,/legacyKey:'history-'\+i/);
   assert.match(returns,/attendance\[`history:\$\{id\}`\]=attendance\.current/);assert.match(returns,/delete attendance\.current/);assert.match(returns,/CombatData\.transaction/);
+});
+
+test('open historical debts stay visible and can be transferred from history',()=>{
+  const attendance=fs.readFileSync(path.join(root,'attendance.js'),'utf8'),returns=fs.readFileSync(path.join(root,'returns.js'),'utf8'),history=fs.readFileSync(path.join(root,'history-collapse.js'),'utf8');
+  assert.match(returns,/panel\.innerHTML=`<div id="carryOverList"><\/div><div class="return-launch">/);
+  assert.match(returns,/data-debt-transfer/);assert.match(history,/history-transfer/);assert.match(history,/combatOpenHistoryTransfer/);
+  assert.match(attendance,/historicalReturnData/);assert.match(attendance,/openSlots/);
+});
+
+test('cloud schema enforces coach isolation and an explicit admin role',()=>{
+  const sql=fs.readFileSync(path.join(root,'supabase','bootstrap.sql'),'utf8'),cloud=fs.readFileSync(path.join(root,'cloud-sync.js'),'utf8');
+  assert.match(sql,/alter table public\.profiles enable row level security/);
+  assert.match(sql,/alter table public\.coach_states enable row level security/);
+  assert.match(sql,/owner_id = \(select auth\.uid\(\)\) or \(select private\.is_admin\(\)\)/);
+  assert.match(sql,/liadpro12345@gmail\.com/);
+  assert.doesNotMatch(sql,/user_metadata[^\n]+(?:role|admin)/i);
+  assert.match(cloud,/flowType:'pkce'/);
+  assert.match(cloud,/אישור העברת נתוני המכשיר לענן/);
+  assert.match(cloud,/\.eq\('revision',revision\)/);
+  assert.match(cloud,/openRememberedAdminWorkspace/);
 });
 

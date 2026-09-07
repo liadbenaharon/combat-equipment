@@ -1,6 +1,7 @@
 // Workout attendance manager: choose an existing workout, paste attendance, and show only no-shows who have gear.
 (function(){
   const ATTENDANCE_KEY='combatEquipmentAttendanceV2';
+  const RETURN_KEY='combatEquipmentReturnsV1';
   const PHONE_KEY='combatEquipmentPhonesV1';
   const SELECTED_WORKOUT_KEY='combatEquipmentAttendanceWorkoutV1';
   const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').replace(/[*.]/g,'').replace(/^\s*\d+[.)]?\s*/,'').replace(/^\s*[⁠•\-–—]+\s*/,'').trim();
@@ -69,20 +70,46 @@
   function wasAsked(name){return Boolean(getSelected().asked?.[askedKey(name)])}
   function setAsked(name,checked){const d=getSelected(),asked={...(d.asked||{})};if(checked)asked[askedKey(name)]=true;else delete asked[askedKey(name)];saveSelected({...d,asked})}
   function recordTransfer(fromName,toName,gear){const d=getSelected(),asked={...(d.asked||{}),[askedKey(fromName)]:true},transfers={...(d.transfers||{}),[askedKey(fromName)]:{from:fromName,to:toName,gear:Array.isArray(gear)?gear:[]}};saveSelected({...d,asked,transfers})}
+  function assignmentRows(eq){
+    const inferred=(eq.assignments||[]).reduce((sum,a)=>sum+Math.max(0,Number(a.qty||0)),0),highest=(eq.assignments||[]).flatMap(a=>Array.isArray(a.units)?a.units:[]).reduce((max,i)=>Math.max(max,Number(i)+1),0),total=Math.max(0,Number(eq.qty||0),inferred,highest),used=new Set(),rows=[];
+    for(const assignment of eq.assignments||[]){
+      let slots=[];
+      if(Array.isArray(assignment.units)&&assignment.units.length){
+        slots=assignment.units.map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<total&&!used.has(i));
+      }else{
+        const wanted=Math.max(0,Number(assignment.qty||0));
+        for(let i=0;i<total&&slots.length<wanted;i++)if(!used.has(i))slots.push(i);
+      }
+      slots.forEach(i=>used.add(i));rows.push({assignment,slots});
+    }
+    return rows;
+  }
+  function historicalReturnData(historyItem,historyIndex){
+    try{const all=JSON.parse(localStorage.getItem(RETURN_KEY)||'{}'),key=`history:${historyItem?.id||historyIndex}`;return all[key]||all[`history-${historyIndex}`]||{}}catch{return {}}
+  }
   function transferEquipment(fromName,toName){
     fromName=clean(fromName);toName=clean(toName);if(!fromName||!toName||norm(fromName)===norm(toName))return false;
-    const history=selectedWorkout==='current'?null:historyItems(),historyItem=history?.find((x,i)=>`history:${x.id||i}`===selectedWorkout),equipment=selectedWorkout==='current'?(state.equipment||[]):(historyItem?.equipment||[]),gearBefore=[];let changed=false;
+    const history=selectedWorkout==='current'?null:historyItems(),historyIndex=history?.findIndex((x,i)=>`history:${x.id||i}`===selectedWorkout)??-1,historyItem=historyIndex>=0?history[historyIndex]:null,equipment=selectedWorkout==='current'?(state.equipment||[]):(historyItem?.equipment||[]),returnData=historyItem?historicalReturnData(historyItem,historyIndex):{},gearBefore=[];let changed=false;
     equipment.forEach(eq=>{
       const assignments=eq.assignments||[],sources=assignments.filter(a=>norm(a.name)===norm(fromName));if(!sources.length)return;
-      gearBefore.push({name:eq.name,qty:sources.reduce((sum,a)=>sum+Number(a.qty||0),0)});
-      let target=assignments.find(a=>norm(a.name)===norm(toName)&&norm(a.name)!==norm(fromName));
-      if(target){
-        for(const source of sources){
-          if(Array.isArray(source.units)||Array.isArray(target.units)){target.units=[...new Set([...(target.units||[]),...(source.units||[])])].sort((a,b)=>a-b);target.qty=target.units.length}else target.qty=Number(target.qty||0)+Number(source.qty||0);
-        }
-        eq.assignments=assignments.filter(a=>!sources.includes(a));
-      }else sources.forEach(a=>a.name=toName);
-      changed=true;
+      if(!historyItem){
+        const moved=sources.reduce((sum,a)=>sum+Number(a.qty||0),0);if(!moved)return;gearBefore.push({name:eq.name,qty:moved});
+        let target=assignments.find(a=>norm(a.name)===norm(toName)&&norm(a.name)!==norm(fromName));
+        if(target){for(const source of sources){if(Array.isArray(source.units)||Array.isArray(target.units)){target.units=[...new Set([...(target.units||[]),...(source.units||[])])].sort((a,b)=>a-b);target.qty=target.units.length}else target.qty=Number(target.qty||0)+Number(source.qty||0)}eq.assignments=assignments.filter(a=>!sources.includes(a))}else sources.forEach(a=>a.name=toName);
+        changed=true;return;
+      }
+      const next=[],movedSlots=[];
+      for(const row of assignmentRows(eq)){
+        const base={...row.assignment,qty:row.slots.length,units:[...row.slots]};
+        if(norm(row.assignment.name)!==norm(fromName)){if(base.qty)next.push(base);continue}
+        const returnedSlots=row.slots.filter(i=>returnData[`${eq.id}:${i}`]),openSlots=row.slots.filter(i=>!returnData[`${eq.id}:${i}`]);
+        if(returnedSlots.length)next.push({...base,name:fromName,qty:returnedSlots.length,units:returnedSlots});
+        movedSlots.push(...openSlots);
+      }
+      if(!movedSlots.length)return;
+      let target=next.find(a=>norm(a.name)===norm(toName));
+      if(target){target.units=[...new Set([...(target.units||[]),...movedSlots])].sort((a,b)=>a-b);target.qty=target.units.length}else next.push({name:toName,qty:movedSlots.length,units:[...movedSlots].sort((a,b)=>a-b)});
+      eq.assignments=next;gearBefore.push({name:eq.name,qty:movedSlots.length});changed=true;
     });
     if(!changed)return false;
     if(selectedWorkout==='current'){
@@ -300,6 +327,10 @@
   const style=document.createElement('style');style.textContent='.name-ambiguity-card{display:flex;align-items:flex-start;gap:12px;padding:14px;border-color:#9a7537;background:#302714}.name-ambiguity-card p{margin:7px 0 0;color:#ffe1a6;font-size:13px;line-height:1.45}.name-ambiguity-icon{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:50%;background:#d99a2b;color:#201506;font-size:20px;font-weight:950}.contact-select{display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px}.contact-select input{width:22px;height:22px;flex-shrink:0;accent-color:#f07a22}.contact-selection-info{flex:1;min-width:0}.contact-selection-bar{border-top:1px solid #46513f;margin-top:12px}.contact-selection-bar .btn:disabled{opacity:.45;cursor:default}.contacts-card{padding:14px}.contacts-card summary{cursor:pointer;font-weight:800;min-height:40px;padding:8px 0}.contacts-card p,.contacts-import label{line-height:1.6}.contacts-import{margin-top:18px;border-top:1px solid #46513f;padding-top:8px}.contacts-import textarea{margin:10px 0;font:inherit;resize:vertical}.contact-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #46513f;overflow-wrap:anywhere}.contact-row>div:first-child{min-width:0}.contact-row-actions{display:flex;gap:6px;flex-shrink:0}.contacts-card [hidden]{display:none!important}@media(max-width:380px){.contact-row{align-items:stretch;flex-direction:column}}.attendance-card{padding:14px}.attendance-workout{appearance:auto}.attendance-text{min-height:180px;resize:vertical;line-height:1.55}.attendance-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.attendance-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.attendance-stats.single{grid-template-columns:1fr}.attendance-stats>div{text-align:center;border:1px solid #46513f;border-radius:12px;padding:10px;background:#151a13}.attendance-stats strong{display:block;font-size:22px}.attendance-stats span{font-size:11px;color:#b8baaf}.no-show-card{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-color:#74423d}.no-show-info{min-width:0;flex:1}.no-show-actions{display:flex;flex-direction:column;gap:6px;min-width:112px}.whatsapp-btn{background:#183d28;border-color:#2c7a4b;color:#d9ffe7}.copy-btn{background:#242b22;border-color:#56604f;color:#f4f2e8}.trainee-chip.trainee-absent{border-color:#a35249;color:#ffd3ce;background:#321d1b}.absent-mark{font-size:10px;color:#ff9f95}.app-version-fixed{font-size:11px;font-weight:800;color:#aeb3a8;vertical-align:middle;margin-right:6px;white-space:nowrap}@media(max-width:520px){.tabs{gap:5px}.tab{font-size:12px;padding:6px}.attendance-actions{grid-template-columns:1fr}.no-show-card{align-items:stretch;flex-direction:column}.no-show-actions{width:100%;display:grid;grid-template-columns:1fr}.no-show-actions .btn{width:100%}}';document.head.appendChild(style);
   const transferStyle=document.createElement('style');transferStyle.textContent='.ambiguity-content{flex:1;min-width:0}.ambiguity-person{border-top:1px solid #6e572f;padding:10px 0}.asked-check{display:flex;align-items:center;gap:8px;margin-top:10px;min-height:38px;font-size:14px;font-weight:800;cursor:pointer}.asked-check input{width:21px;height:21px;accent-color:#f07a22}.transfer-btn{margin-top:6px;background:#2b3027;border-color:#697260}.transfer-complete-card{display:flex;align-items:flex-start;gap:11px;padding:14px;border-color:#47734c;background:#17271a}.transfer-complete-icon{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:50%;background:#3f7546;color:#fff;font-size:19px;font-weight:950}.asked-complete{margin:5px 0;color:#c8ebca;font-size:14px}.transfer-modal{max-height:88vh;overflow:auto}.transfer-options{display:grid;gap:9px}.transfer-option{display:flex;align-items:flex-start;gap:11px;padding:12px;border:1px solid #535d4a;border-radius:13px;background:#171c14;cursor:pointer}.transfer-option:has(input:checked){border-color:#f07a22;background:#2c2117}.transfer-option input{width:21px;height:21px;margin-top:2px;accent-color:#f07a22}.transfer-option span{display:grid;gap:3px}.transfer-option small{color:#aeb3a8;line-height:1.4}.transfer-options [hidden]{display:none!important}';document.head.appendChild(transferStyle);
   buildUI();buildContactsUI();buildTransferModal();
+  window.combatOpenHistoryTransfer=(historyKey,name)=>{
+    const key=String(historyKey||'');if(!workoutOptions().some(option=>option.key===key))return false;
+    setSelectedWorkout(key);renderAttendance();openTransfer(encodeURIComponent(clean(name)));return true;
+  };
   document.getElementById('noShowWarnings')?.addEventListener('click',e=>{
     const button=e.target.closest('button');if(!button)return;
     if(button.hasAttribute('data-whatsapp'))openWhatsApp(encodeURIComponent(button.dataset.whatsapp));
@@ -307,6 +338,6 @@
     if(button.hasAttribute('data-transfer'))openTransfer(encodeURIComponent(button.dataset.transfer));
   });
   document.getElementById('noShowWarnings')?.addEventListener('change',e=>{const input=e.target.closest('input[data-asked]');if(input)setAsked(input.dataset.asked,input.checked)});
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.3.13');appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.4.1');appTitle.append(' ',version)}
 })();
 

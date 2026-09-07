@@ -8,7 +8,7 @@ The web/PWA repository is ready to serve as the web content for an Android test 
 - [x] Maskable-capable 512 icon with an opaque background and safe central artwork.
 - [x] Offline app shell and navigation fallback.
 - [x] Controlled service-worker update prompt and cache cleanup.
-- [x] Central app/cache version and visible `v2.3.13`.
+- [x] Central app/cache version and visible `v2.4.1`.
 - [x] Backward-compatible data normalization and stable history ids.
 - [x] Local JSON backup/restore with validation and rollback on failed import.
 - [x] Privacy page, offline status, storage error feedback, keyboard dialog close, focus visibility, reduced-motion support, touch targets, safe areas, and narrow-screen adjustments.
@@ -37,8 +37,8 @@ The repository now includes a buildable Android Browser Helper TWA project in [`
 - [ ] Create the app entry, accept the developer declarations, and configure Play App Signing.
 - [ ] Upload the signed `.aab` to Internal testing first, add testers, and resolve every pre-launch report issue before Closed/Open testing.
 - [ ] Supply store title/description, phone and tablet screenshots, high-resolution icon, feature graphic, category, contact details, and the public privacy-policy URL.
-- [ ] Complete Data safety accurately: this build stores user-entered data locally and hands a prepared number/message to WhatsApp only after a user action; confirm the final Android wrapper adds no analytics, SDK collection, backups, or permissions before declaring this.
-- [ ] Complete content rating, ads declaration, target audience, app access, and any account-deletion declaration (there are no accounts in the current web app).
+- [ ] Complete Data safety accurately: Google account details and approved training data are stored in Supabase; the app also hands a prepared number/message to WhatsApp only after a user action. Confirm the final Android wrapper adds no analytics, ads, backups, or permissions before declaring this.
+- [ ] Complete content rating, ads declaration, target audience, app access, and the required public account/data-deletion route.
 - [ ] Confirm the current target API deadline and testing requirements in Play Console immediately before submission; these policies change outside the repository.
 
 ## Release gate

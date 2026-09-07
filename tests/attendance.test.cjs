@@ -155,6 +155,17 @@ test('transferring equipment in a historical workout persists the new holder',()
   assert.equal(saved.people[0].name,'תומר');
   assert.match(elements.noShowWarnings.innerHTML,/הציוד הועבר ל־<b>תומר<\/b>/);
 });
+test('historical transfer moves only units that were not returned',()=>{
+  const history=[{id:'past',date:'past',people:[{name:'מאליק',items:[{name:'אלונקה',qty:3}]}],equipment:[{id:'stretcher',name:'אלונקה',qty:3,assignments:[{name:'מאליק',qty:3,units:[0,1,2]}]}]}];
+  const returns={'history:past':{'stretcher:0':true}};
+  const {api:a,data,elements}=harness({combatEquipmentHistoryV1:JSON.stringify(history),combatEquipmentReturnsV1:JSON.stringify(returns),[AK]:JSON.stringify({'history:past':{attending:[],absent:['מאליק']}})});
+  elements.attendanceResults={innerHTML:''};elements.noShowWarnings={innerHTML:''};a.select('history:past');
+  assert.equal(a.transferEquipment('מאליק','רימון'),true);
+  const saved=JSON.parse(data.get('combatEquipmentHistoryV1'))[0],assignments=saved.equipment[0].assignments;
+  assert.deepEqual(JSON.parse(JSON.stringify(assignments)),[{name:'מאליק',qty:1,units:[0]},{name:'רימון',qty:2,units:[1,2]}]);
+  assert.deepEqual(JSON.parse(JSON.stringify(saved.people)),[{name:'מאליק',items:[{name:'אלונקה',qty:1}]},{name:'רימון',items:[{name:'אלונקה',qty:2}]}]);
+  assert.match(elements.noShowWarnings.innerHTML,/2 × אלונקה/);
+});
 test('latest historical workout is always the default and its transfer notice survives reload',()=>{
   const history=JSON.stringify([{id:'past',date:'past',people:[{name:'תומר',items:[{name:'אלונקה',qty:1}]}],equipment:[{id:'stretcher',name:'אלונקה',assignments:[{name:'תומר',qty:1,units:[0]}]}]}]);
   const attendance=JSON.stringify({'history:past':{attending:[],absent:['שי גרובמן'],asked:{גרובמן:true},transfers:{גרובמן:{from:'גרובמן',to:'תומר',gear:[{name:'אלונקה',qty:1}]}}}});
@@ -203,20 +214,24 @@ test('WhatsApp direct/fallback URLs, copy and special characters in names',async
   elements.noShowWarnings={innerHTML:''};a.checkAssignedNoShows();assert.ok(elements.noShowWarnings.innerHTML.includes('&lt;tag&gt;'));assert.ok(!elements.noShowWarnings.innerHTML.includes('onclick='));
 });
 test('service worker cache/assets and injection agree; injection is idempotent',()=>{
-  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v59'}};vm.createContext(ctx);
+  const events={},ctx={self:{addEventListener:(name,fn)=>events[name]=fn}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v61'}};vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8')+'\nthis.test={CACHE,ASSETS};',ctx);
-  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v59');
+  const a=ctx.test,html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal(a.CACHE,'combat-equipment-v61');
   for(const asset of a.ASSETS)assert.ok(fs.existsSync(path.join(root,asset.split('?')[0])),asset);
-  assert.ok(a.ASSETS.includes('./attendance.js?v=18'));assert.ok(html.includes('./attendance.js?v=18'));
-  assert.ok(a.ASSETS.includes('./app-lifecycle.js?v=6'));assert.ok(html.includes('./app-lifecycle.js?v=6'));
+  assert.ok(a.ASSETS.includes('./attendance.js?v=19'));assert.ok(html.includes('./attendance.js?v=19'));
+  assert.ok(a.ASSETS.includes('./history-collapse.js?v=3'));assert.ok(html.includes('./history-collapse.js?v=3'));
+  assert.ok(a.ASSETS.includes('./returns.js?v=4'));assert.ok(html.includes('./returns.js?v=4'));
+  assert.ok(a.ASSETS.includes('./app-lifecycle.js?v=7'));assert.ok(html.includes('./app-lifecycle.js?v=7'));
+  assert.ok(a.ASSETS.includes('./cloud-config.js?v=1'));assert.ok(html.includes('./cloud-config.js?v=1'));
+  assert.ok(a.ASSETS.includes('./cloud-bundle.js?v=1'));assert.ok(html.includes('./cloud-bundle.js?v=1'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=4'));assert.ok(html.includes('./native-ui.js?v=4'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
   const events={},cache=new Map(),deleted=[];let installed;
-  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v58'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v59'}};
+  const ctx={Response,URL,fetch:async()=>{throw Error('offline')},self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{} }},caches:{open:async()=>({addAll:async assets=>{installed=assets},put:async(k,v)=>cache.set(k,v)}),keys:async()=>['combat-equipment-v21','combat-equipment-v60'],delete:async k=>deleted.push(k),match:async k=>cache.get(k)}};ctx.importScripts=()=>{ctx.self.COMBAT_APP={cache:'combat-equipment-v61'}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),ctx);
-  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=18'));
-  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v58']);
+  let pending;events.install({waitUntil:p=>pending=p});await pending;assert.ok(installed.includes('./attendance.js?v=19'));
+  events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['combat-equipment-v21','combat-equipment-v60']);
   cache.set('./index.html',new Response('<body>offline shell</body>'));
   events.fetch({request:{method:'GET',mode:'navigate',url:'https://example.test/app'},respondWith:p=>pending=p});assert.match(await (await pending).text(),/offline shell/);
   const request={method:'GET',mode:'cors',url:'https://example.test/app.js'};cache.set(request,new Response('cached asset'));events.fetch({request,respondWith:p=>pending=p});assert.equal(await (await pending).text(),'cached asset');

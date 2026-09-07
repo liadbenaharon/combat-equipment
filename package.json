@@ -1,10 +1,16 @@
 {
   "name": "combat-equipment",
-  "version": "2.3.13",
+  "version": "2.4.1",
   "private": true,
   "scripts": {
+    "build:cloud": "esbuild cloud-sync.js --bundle --minify --format=iife --target=es2020 --outfile=cloud-bundle.js",
     "test": "node --test tests/*.test.cjs",
-    "check": "node --check app-config.js && node --check data-safety.js && node --check app-lifecycle.js && node --check native-ui.js && node --check attendance.js && node --check contacts-count.js && node --check returns.js && node --check sw.js && node --test tests/*.test.cjs"
+    "check": "npm run build:cloud && node --check app-config.js && node --check cloud-config.js && node --check data-safety.js && node --check app-lifecycle.js && node --check native-ui.js && node --check attendance.js && node --check contacts-count.js && node --check returns.js && node --check sw.js && node --test tests/*.test.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.115.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
   }
 }
-
