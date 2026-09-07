@@ -1,6 +1,6 @@
 // Smart equipment return center: per-workout returns + automatic carry-over of unresolved gear.
 (function(){
-  const RETURN_KEY='combatEquipmentReturnsV1',ATTENDANCE_KEY='combatEquipmentAttendanceV2',HISTORY_KEY='combatEquipmentHistoryV1',CARRY_MARK='__carriedIntoCurrentV1';
+  const RETURN_KEY='combatEquipmentReturnsV1',ATTENDANCE_KEY='combatEquipmentAttendanceV2',HISTORY_KEY='combatEquipmentHistoryV1',CARRY_MARK='__carriedIntoCurrentV1',RECOVERY_DONE='__legacyCarryRecoveryDoneV1';
   const norm=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim().replace(/\s+/g,' ').toLocaleLowerCase('he');
   let returnMode=false,view='people',missingOnly=true,selectedWorkout='current';
   const historyItems=()=>{try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}};
@@ -10,7 +10,8 @@
   function readAll(){try{const raw=JSON.parse(localStorage.getItem(RETURN_KEY)||'{}');if(!raw||typeof raw!=='object'||Array.isArray(raw))return {};const vals=Object.values(raw);if(vals.length&&vals.every(v=>typeof v==='boolean'))return {current:raw};return raw}catch{return {}}}
   const writeAll=d=>localStorage.setItem(RETURN_KEY,JSON.stringify(d));
   const read=()=>readAll()[selectedWorkout]||{};
-  function write(d){const all=readAll();all[selectedWorkout]=d;writeAll(all)}
+  function workoutIdForKey(key){const option=workoutOptions().find(x=>x.key===key);return option?(option.id??option.historyIndex):null}
+  function write(d){const all=readAll();all[selectedWorkout]=d;writeAll(all);if(selectedWorkout!=='current')reconcileCarriedWorkout(workoutIdForKey(selectedWorkout))}
   const slotKey=(eq,i)=>`${eq.id}:${i}`;
   const isBack=(eq,i)=>!!read()[slotKey(eq,i)];
   function setSlots(eq,slots,value){const d=read();slots.forEach(i=>d[slotKey(eq,i)]=!!value);write(d)}
@@ -30,18 +31,33 @@
       const missing=activeSlots(eq).filter(i=>!returnData[slotKey(eq,i)]),missingSet=new Set(missing);
       const assignments=allocation(eq).filter(a=>!a.unassigned).map(a=>{const units=a.slots.filter(i=>missingSet.has(i));return units.length?{name:a.name,qty:units.length,units,carriedFromWorkoutId:workoutId}:null}).filter(Boolean);
       const checked=Array.from({length:Number(eq.qty||0)},(_,i)=>missingSet.has(i));
-      return {...eq,checked,assignments};
+      return {...eq,checked,assignments,carriedSlotsByWorkout:{[String(workoutId)]:missing}};
     });
   }
   const carryEquipment=(workoutId,returnData)=>carryEquipmentFrom(state.equipment,workoutId,returnData);
   function hasActiveEquipment(equipment){return (equipment||[]).some(eq=>activeSlots(eq).length>0)}
   function mergeCarriedEquipment(current,carried){const byId=new Map((carried||[]).map(eq=>[String(eq.id),eq]));const merged=(current||[]).map(eq=>{const debt=byId.get(String(eq.id));if(!debt)return eq;byId.delete(String(eq.id));const qty=Math.max(Number(eq.qty||0),Number(debt.qty||0));return {...eq,qty,checked:Array.from({length:qty},(_,i)=>Boolean(debt.checked[i])),assignments:debt.assignments}});return merged.concat([...byId.values()])}
+  function removeCarriedWorkout(workoutId,persist=true){
+    if(workoutId===null||workoutId===undefined)return false;const origin=String(workoutId);let changed=false;
+    const equipment=(state.equipment||[]).map(eq=>{const assignments=Array.isArray(eq.assignments)?eq.assignments:[],removed=assignments.filter(a=>String(a.carriedFromWorkoutId)===origin),kept=assignments.filter(a=>String(a.carriedFromWorkoutId)!==origin),tracked=Array.isArray(eq.carriedSlotsByWorkout?.[origin])?eq.carriedSlotsByWorkout[origin]:[],removedSlots=new Set([...tracked,...removed.flatMap(a=>Array.isArray(a.units)?a.units:[])]);if(!removed.length&&!tracked.length)return eq;changed=true;const stillUsed=new Set(kept.flatMap(a=>Array.isArray(a.units)?a.units:[])),checked=Array.from({length:Number(eq.qty||0)},(_,i)=>removedSlots.has(i)&&!stillUsed.has(i)?false:Boolean(eq.checked?.[i])),carriedSlotsByWorkout={...(eq.carriedSlotsByWorkout||{})};delete carriedSlotsByWorkout[origin];return {...eq,checked,assignments:kept,carriedSlotsByWorkout}});
+    if(!changed)return false;state={...state,equipment};if(persist){CombatData.transaction({combatEquipmentStateV1:state});renderAll?.()}return true
+  }
+  function reconcileCarriedWorkout(workoutId){
+    if(workoutId===null||workoutId===undefined)return false;const origin=String(workoutId),history=historyItems(),index=history.findIndex((h,i)=>String(h.id??i)===origin),item=history[index];if(!item)return removeCarriedWorkout(workoutId);
+    const all=readAll(),returnData=all[`history:${item.id??index}`]||all[`history-${index}`]||{},expected=carryEquipmentFrom(item.equipment,item.id??index,returnData);let changed=removeCarriedWorkout(workoutId,false),equipment=state.equipment||[];
+    expected.forEach(debt=>{const expectedAssignments=(debt.assignments||[]).filter(a=>a.units?.length),expectedSlots=debt.carriedSlotsByWorkout?.[origin]||[];if(!expectedAssignments.length&&!expectedSlots.length)return;let at=equipment.findIndex(eq=>String(eq.id)===String(debt.id));if(at<0){equipment=[...equipment,{...debt}];changed=true;return}const eq=equipment[at],qty=Math.max(Number(eq.qty||0),Number(debt.qty||0)),assignments=[...(eq.assignments||[])],used=new Set(assignments.flatMap(a=>Array.isArray(a.units)?a.units:[]));expectedAssignments.forEach(a=>{const units=a.units.filter(i=>!used.has(i));if(!units.length)return;units.forEach(i=>used.add(i));assignments.push({...a,qty:units.length,units})});const carriedSlots=expectedSlots.filter(i=>!used.has(i)||expectedAssignments.some(a=>a.units.includes(i))),checked=Array.from({length:qty},(_,i)=>Boolean(eq.checked?.[i])||carriedSlots.includes(i)),carriedSlotsByWorkout={...(eq.carriedSlotsByWorkout||{}),[origin]:carriedSlots};equipment[at]={...eq,qty,checked,assignments,carriedSlotsByWorkout};changed=true});
+    if(!changed)return false;state={...state,equipment};CombatData.transaction({combatEquipmentStateV1:state});renderAll?.();return true
+  }
+  function removeOrphanedCarriedAssignments(){
+    const valid=new Set(historyItems().map((h,i)=>String(h.id??i))),origins=new Set();(state.equipment||[]).forEach(eq=>{(eq.assignments||[]).forEach(a=>{if(a.carriedFromWorkoutId!==undefined&&!valid.has(String(a.carriedFromWorkoutId)))origins.add(String(a.carriedFromWorkoutId))});Object.keys(eq.carriedSlotsByWorkout||{}).forEach(id=>{if(!valid.has(String(id)))origins.add(String(id))})});if(!origins.size)return false;
+    let changed=false;origins.forEach(id=>{changed=removeCarriedWorkout(id,false)||changed});if(!changed)return false;const all=readAll();all[RECOVERY_DONE]=true;CombatData.transaction({[RETURN_KEY]:all,combatEquipmentStateV1:state});renderAll?.();return true
+  }
   function recoverOutstandingFromHistory(){
-    if(hasActiveEquipment(state.equipment))return false;const all=readAll(),history=historyItems();
+    if(hasActiveEquipment(state.equipment))return false;const all=readAll(),history=historyItems();if(all[RECOVERY_DONE])return false;
     let source=null;
     for(let index=0;index<history.length;index++){const item=history[index],key=`history:${item.id||index}`,returns=all[key]||all[`history-${index}`]||{};if(returns[CARRY_MARK])continue;if(carryEquipmentFrom(item.equipment,item.id||index,returns).some(eq=>activeSlots(eq).length)){source={item,index,key,returns};break}}
     if(!source)return false;
-    const carried=carryEquipmentFrom(source.item.equipment,source.item.id||source.index,source.returns),nextState={...state,equipment:mergeCarriedEquipment(state.equipment,carried)},nextReturns={...all,[source.key]:{...source.returns,[CARRY_MARK]:true}};
+    const carried=carryEquipmentFrom(source.item.equipment,source.item.id||source.index,source.returns),nextState={...state,equipment:mergeCarriedEquipment(state.equipment,carried)},nextReturns={...all,[source.key]:{...source.returns,[CARRY_MARK]:true},[RECOVERY_DONE]:true};
     if(!CombatData.transaction({[RETURN_KEY]:nextReturns,combatEquipmentStateV1:nextState}))return false;
     state=nextState;renderAll?.();window.dispatchEvent?.(new CustomEvent('combat-carry-recovered',{detail:{workoutId:source.item.id}}));return true;
   }
@@ -61,7 +77,7 @@
     });
     return debts;
   }
-  function closeDebt(debt){const all=readAll(),d=all[debt.historyKey]||{};debt.slots.forEach(i=>d[`${debt.eqId}:${i}`]=true);all[debt.historyKey]=d;writeAll(all);renderReturns();if(typeof renderHistory==='function')renderHistory()}
+  function closeDebt(debt){const all=readAll(),d=all[debt.historyKey]||{};debt.slots.forEach(i=>d[`${debt.eqId}:${i}`]=true);all[debt.historyKey]=d;writeAll(all);reconcileCarriedWorkout(workoutIdForKey(debt.historyKey));renderReturns();if(typeof renderHistory==='function')renderHistory()}
   function renderCarry(){
     const root=document.getElementById('carryOverList');if(!root)return;
     const debts=carryDebts();root.hidden=false;
@@ -100,6 +116,7 @@
     state=nextState;selectedWorkout='current';renderAll();alert(missingCount?'האימון נשמר. הציוד שלא הוחזר עבר עם השמות והמספרים שלו לאימון החדש.':'האימון נשמר בהיסטוריה')
   }
 
-  window.combatReturnMissing=missingCurrent;window.renderCombatReturns=renderReturns;window.combatOpenReturnMode=()=>{returnMode=true;document.querySelector('[data-tab="check"]')?.click();renderReturns();returnPanel?.scrollIntoView({behavior:'smooth',block:'start'})};window.combatConfirmFinish=()=>true;window.combatResetReturns=()=>{};window.combatDeleteReturnWorkout=historyId=>{const all=readAll();delete all[`history:${historyId}`];writeAll(all);if(selectedWorkout===`history:${historyId}`)selectedWorkout='current';renderReturns()};
-  ensureUI();if(window.finishBtn)finishBtn.onclick=finishWorkout;renderReturns();setTimeout(recoverOutstandingFromHistory,0);window.addEventListener('combat-cloud-ready',recoverOutstandingFromHistory);window.addEventListener('storage',()=>{renderReturns();decorateAbsent()});document.addEventListener('click',()=>setTimeout(decorateAbsent,0));
+  window.combatReturnMissing=missingCurrent;window.renderCombatReturns=renderReturns;window.combatOpenReturnMode=()=>{returnMode=true;document.querySelector('[data-tab="check"]')?.click();renderReturns();returnPanel?.scrollIntoView({behavior:'smooth',block:'start'})};window.combatConfirmFinish=()=>true;window.combatResetReturns=()=>{};window.combatDeleteReturnWorkout=historyId=>{removeCarriedWorkout(historyId);const all=readAll();delete all[`history:${historyId}`];all[RECOVERY_DONE]=true;writeAll(all);if(selectedWorkout===`history:${historyId}`)selectedWorkout='current';renderReturns()};window.combatDeleteAllReturnWorkouts=()=>{const origins=new Set();(state.equipment||[]).forEach(eq=>(eq.assignments||[]).forEach(a=>{if(a.carriedFromWorkoutId!==undefined)origins.add(String(a.carriedFromWorkoutId))}));origins.forEach(id=>removeCarriedWorkout(id,false));const all=readAll();Object.keys(all).filter(k=>k.startsWith('history:')||k.startsWith('history-')).forEach(k=>delete all[k]);all[RECOVERY_DONE]=true;CombatData.transaction({[RETURN_KEY]:all,combatEquipmentStateV1:state});renderAll?.()};
+  function repairCarryState(){if(!removeOrphanedCarriedAssignments())recoverOutstandingFromHistory()}
+  ensureUI();if(window.finishBtn)finishBtn.onclick=finishWorkout;renderReturns();setTimeout(repairCarryState,0);window.addEventListener('combat-cloud-ready',repairCarryState);window.addEventListener('storage',()=>{renderReturns();decorateAbsent()});document.addEventListener('click',()=>setTimeout(decorateAbsent,0));
 })();

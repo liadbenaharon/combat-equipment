@@ -354,6 +354,6 @@
     if(button.hasAttribute('data-transfer'))openTransfer(encodeURIComponent(button.dataset.transfer));
   });
   document.getElementById('noShowWarnings')?.addEventListener('change',e=>{const input=e.target.closest('input[data-asked]');if(input)setAsked(input.dataset.asked,input.checked)});
-  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.4.3');appTitle.append(' ',version)}
+  renderAttendance();decorateTraineeChoices();document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());const appTitle=document.querySelector('.headline h1');if(appTitle){const version=document.createElement('span');version.className='app-version-fixed';version.dir='ltr';version.textContent='v'+(window.COMBAT_APP?.version||'2.4.4');appTitle.append(' ',version)}
 })();
 

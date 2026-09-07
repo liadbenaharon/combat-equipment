@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.3'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.4'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.3');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.4');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.3');
-  assert.equal(twa.appVersionCode,253);
+  assert.equal(twa.appVersion,'2.4.4');
+  assert.equal(twa.appVersionCode,254);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 253/);
+  assert.match(gradle,/versionCode 254/);
   assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
@@ -115,13 +115,20 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),theme=fs.readFileSync(path.join(root,'app-theme.css'),'utf8');
-  assert.match(html,/app-theme\.css\?v=5/);assert.match(html,/app-config\.js\?v=10/);assert.match(html,/native-ui\.js\?v=4/);assert.match(sw,/app-theme\.css\?v=5/);assert.match(sw,/app-config\.js\?v=10/);assert.match(sw,/native-ui\.js\?v=4/);
+  assert.match(html,/app-theme\.css\?v=6/);assert.match(html,/app-config\.js\?v=11/);assert.match(html,/native-ui\.js\?v=5/);assert.match(sw,/app-theme\.css\?v=6/);assert.match(sw,/app-config\.js\?v=11/);assert.match(sw,/native-ui\.js\?v=5/);
+  assert.match(theme,/\.overlay\{z-index:240\}/);assert.match(theme,/\.overlay \.modalBtns\{position:sticky/);
   assert.match(theme,/@media\(max-width:699px\)/);assert.match(theme,/position:fixed/);assert.match(theme,/safe-area-inset-bottom/);
 });
 
 test('equipment saves expose a bounded undo flow',()=>{
   const lifecycle=fs.readFileSync(path.join(root,'app-lifecycle.js'),'utf8'),native=fs.readFileSync(path.join(root,'native-ui.js'),'utf8');
   assert.match(lifecycle,/combat-state-saved/);assert.match(lifecycle,/detail:\{previous\}/);assert.match(native,/offerUndo/);assert.match(native,/combat-state-restored/);assert.match(native,/7000/);
+});
+
+test('assignment dialog stays above undo feedback and ignores a stale rapid second save',()=>{
+  const theme=fs.readFileSync(path.join(root,'app-theme.css'),'utf8'),equipment=fs.readFileSync(path.join(root,'equipment-icons.js'),'utf8');
+  assert.match(theme,/\.overlay\{z-index:240\}/);assert.match(theme,/\.overlay \.modalBtns\{position:sticky/);
+  assert.match(equipment,/if\(!assignModal\.classList\.contains\('show'\)\)return/);
 });
 
 test('attendance and returns use stable history ids and finish moves current attendance',()=>{
