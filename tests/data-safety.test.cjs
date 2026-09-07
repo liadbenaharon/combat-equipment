@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.4'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.5'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.4');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.5');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.4');
-  assert.equal(twa.appVersionCode,254);
+  assert.equal(twa.appVersion,'2.4.5');
+  assert.equal(twa.appVersionCode,255);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 254/);
+  assert.match(gradle,/versionCode 255/);
   assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
@@ -111,6 +111,12 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.match(androidManifest,/android:pathPrefix="\/combat-equipment\/"/);
   assert.match(workflow,/bundleRelease/);
   assert.match(fs.readFileSync(path.join(root,'android','README.md'),'utf8'),/Digital Asset Links/);
+});
+
+test('cloud client points at the active Supabase project hostname',()=>{
+  const config=fs.readFileSync(path.join(root,'cloud-config.js'),'utf8');
+  assert.match(config,/https:\/\/rryvwztjrbvsczyamrtu\.supabase\.co/);
+  assert.doesNotMatch(config,/rryvwztjbvsczyamrtu/);
 });
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
