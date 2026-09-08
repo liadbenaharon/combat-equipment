@@ -68,14 +68,14 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.8'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.9'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.8');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.9');
 });
 
 test('backup success status is automatically dismissed',()=>{
   const source=fs.readFileSync(path.join(root,'app-lifecycle.js'),'utf8');
-  assert.match(source,/announce\('הגיבוי הורד בהצלחה'\)/);
+  assert.match(source,/announce\('הגיבוי מוכן לשמירה'\)/);
   assert.match(source,/if\(duration>0\)statusTimer=setTimeout\(\(\)=>\{node\.hidden=true;node\.textContent=''\},duration\)/);
 });
 
@@ -87,7 +87,7 @@ test('ambiguous attendance names get an explicit manual-review state',()=>{
   assert.match(source,/trainee-ambiguous/);
 });
 
-test('Google Play wrapper preparation stays aligned with the web release',()=>{
+test('Google Play native shell stays aligned with the web release',()=>{
   const web=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
   const twa=JSON.parse(fs.readFileSync(path.join(root,'android','twa-manifest.example.json'),'utf8'));
   const gradle=fs.readFileSync(path.join(root,'android','app','build.gradle'),'utf8');
@@ -97,20 +97,22 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.8');
-  assert.equal(twa.appVersionCode,258);
+  assert.equal(twa.appVersion,'2.4.9');
+  assert.equal(twa.appVersionCode,259);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 258/);
+  assert.match(gradle,/versionCode 259/);
   assert.match(gradle,/minifyEnabled false/);
   assert.match(gradle,/shrinkResources false/);
-  assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
+  assert.doesNotMatch(gradle,/androidbrowserhelper/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
   assert.match(androidManifest,/android:host="liadbenaharon\.github\.io"/);
   assert.match(androidManifest,/android:pathPrefix="\/combat-equipment\/"/);
+  assert.match(androidManifest,/android:name="\.MainActivity"/);
+  assert.doesNotMatch(androidManifest,/trusted\.LauncherActivity/);
   assert.doesNotMatch(androidManifest,/SPLASH_IMAGE_DRAWABLE|FILE_PROVIDER_AUTHORITY|FileProvider/);
   assert.match(fs.readFileSync(path.join(root,'android','app','src','main','res','values','strings.xml'),'utf8'),/<string name="app_name">Combat Equipment<\/string>/);
   assert.match(workflow,/bundleRelease/);
@@ -143,7 +145,7 @@ test('cloud authentication loads data without a reload loop',()=>{
 
 test('native mobile shell and theme are shipped in both HTML and offline cache',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),theme=fs.readFileSync(path.join(root,'app-theme.css'),'utf8');
-  assert.match(html,/app-theme\.css\?v=6/);assert.match(html,/app-config\.js\?v=13/);assert.match(html,/native-ui\.js\?v=5/);assert.match(sw,/app-theme\.css\?v=6/);assert.match(sw,/app-config\.js\?v=13/);assert.match(sw,/native-ui\.js\?v=5/);
+  assert.match(html,/app-theme\.css\?v=6/);assert.match(html,/app-config\.js\?v=14/);assert.match(html,/native-ui\.js\?v=5/);assert.match(sw,/app-theme\.css\?v=6/);assert.match(sw,/app-config\.js\?v=14/);assert.match(sw,/native-ui\.js\?v=5/);
   assert.match(theme,/\.overlay\{z-index:240\}/);assert.match(theme,/\.overlay \.modalBtns\{position:sticky/);
   assert.match(theme,/@media\(max-width:699px\)/);assert.match(theme,/position:fixed/);assert.match(theme,/safe-area-inset-bottom/);
 });

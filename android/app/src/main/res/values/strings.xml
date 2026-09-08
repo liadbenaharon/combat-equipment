@@ -2,5 +2,5 @@
 <resources>
     <string name="app_name">Combat Equipment</string>
     <string name="launch_url">https://liadbenaharon.github.io/combat-equipment/</string>
-    <string name="asset_statements">[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://liadbenaharon.github.io"}}]</string>
+    <string name="loading_error">לא ניתן לטעון את האפליקציה. יש לבדוק את החיבור לאינטרנט.</string>
 </resources>

@@ -18,8 +18,8 @@ android {
         applicationId 'com.liadbenaharon.combatequipment'
         minSdk 24
         targetSdk 36
-        versionCode 258
-        versionName '2.4.8'
+        versionCode 259
+        versionName '2.4.9'
     }
 
     signingConfigs {
@@ -35,8 +35,7 @@ android {
 
     buildTypes {
         release {
-            // Keep the Browser Helper classes intact. The release is tiny even
-            // without shrinking, and avoiding R8 makes startup more reliable.
+            // Keep the native WebView shell easy to diagnose and reliable.
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -53,5 +52,4 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.3'
 }

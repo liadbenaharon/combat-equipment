@@ -19,7 +19,7 @@
     card.innerHTML='<h2 id="dataToolsTitle">גיבוי ופרטיות</h2><p class="mini">המידע נשמר במכשיר. לאחר כניסה ואישור העברה הוא מסונכרן גם לחשבון המאובטח בענן. קובץ הגיבוי כולל שמות ומספרי אנשי קשר שהזנת — שמרו אותו במקום פרטי.</p><div class="data-tool-actions"><button type="button" class="btn" id="exportData">הורדת גיבוי</button><label class="btn import-label">שחזור מגיבוי<input id="importData" type="file" accept="application/json,.json"></label></div><button type="button" class="btn danger clear-device-data" id="clearDeviceData">מחיקת כל הנתונים מהמכשיר</button><p><a href="./privacy.html">מדיניות פרטיות</a></p>';
     summary.appendChild(card);
     document.getElementById('exportData').onclick=()=>{
-      try{const blob=new Blob([JSON.stringify(CombatData.exportBackup(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`combat-equipment-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);announce('הגיבוי הורד בהצלחה')}
+      try{const contents=JSON.stringify(CombatData.exportBackup(),null,2),filename=`combat-equipment-backup-${new Date().toISOString().slice(0,10)}.json`;if(window.CombatAndroid?.saveBackup)window.CombatAndroid.saveBackup(contents,filename);else{const blob=new Blob([contents],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0)}announce('הגיבוי מוכן לשמירה')}
       catch{announce('לא ניתן ליצור גיבוי. ייתכן שחלק מהנתונים פגומים.','error')}
     };
     document.getElementById('importData').onchange=async event=>{
