@@ -1,8 +1,8 @@
 {
   "packageId": "com.liadbenaharon.combatequipment",
   "host": "liadbenaharon.github.io",
-  "name": "ניהול ציוד - כושר קרבי",
-  "launcherName": "ציוד אימון",
+  "name": "Combat Equipment",
+  "launcherName": "Combat Equipment",
   "display": "standalone",
   "themeColor": "#090d0a",
   "themeColorDark": "#090d0a",
@@ -17,9 +17,8 @@
   "maskableIconUrl": "https://liadbenaharon.github.io/combat-equipment/icon-512.png",
   "webManifestUrl": "https://liadbenaharon.github.io/combat-equipment/manifest.webmanifest",
   "fallbackType": "customtabs",
-  "splashScreenFadeOutDuration": 300,
-  "appVersion": "2.4.7",
-  "appVersionCode": 257,
+  "appVersion": "2.4.8",
+  "appVersionCode": 258,
   "signingKey": {
     "path": "UPLOAD_KEYSTORE_PATH_NOT_COMMITTED",
     "alias": "UPLOAD_KEY_ALIAS"

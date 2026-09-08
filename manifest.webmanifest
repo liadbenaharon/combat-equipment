@@ -1,7 +1,7 @@
 {
   "id": "/combat-equipment/",
-  "name": "ניהול ציוד - כושר קרבי",
-  "short_name": "ציוד אימון",
+  "name": "Combat Equipment",
+  "short_name": "Combat Equipment",
   "description": "ניהול, אישור ושיוך ציוד באימוני כושר קרבי",
   "lang": "he",
   "dir": "rtl",

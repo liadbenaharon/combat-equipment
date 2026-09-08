@@ -1,6 +1,12 @@
 # combat-equipment
 
-Current release: **v2.4.7**
+Current release: **v2.4.8**
+
+## v2.4.8 — פתיחת Android יציבה ושם אחיד
+
+- הוסר מנגנון העברת מסך הפתיחה של TWA שגרם לסגירה בחלק מהמכשירים.
+- כיווץ קוד ה-Android בוטל כדי לשמור את רכיבי Browser Helper בשלמותם.
+- שם האפליקציה ב-Android וב-PWA אוחד ל-`Combat Equipment`.
 
 ## v2.4.7 — תיקון פתיחת אפליקציית Android
 

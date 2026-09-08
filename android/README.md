@@ -6,7 +6,7 @@
 
 - Application ID: `com.liadbenaharon.combatequipment`
 - כתובת: `https://liadbenaharon.github.io/combat-equipment/`
-- גרסה: `2.4.7` / version code `257`
+- גרסה: `2.4.8` / version code `258`
 - `compileSdk` ו־`targetSdk`: API 36
 - מינימום: Android 7.0 / API 24
 - הרשאה יחידה: גישה לאינטרנט

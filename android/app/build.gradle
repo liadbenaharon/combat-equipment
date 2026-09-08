@@ -18,8 +18,8 @@ android {
         applicationId 'com.liadbenaharon.combatequipment'
         minSdk 24
         targetSdk 36
-        versionCode 257
-        versionName '2.4.7'
+        versionCode 258
+        versionName '2.4.8'
     }
 
     signingConfigs {
@@ -35,8 +35,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            // Keep the Browser Helper classes intact. The release is tiny even
+            // without shrinking, and avoiding R8 makes startup more reliable.
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
