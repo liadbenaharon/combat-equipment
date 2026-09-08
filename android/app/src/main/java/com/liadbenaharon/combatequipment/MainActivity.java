@@ -74,7 +74,7 @@ public final class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " CombatEquipmentAndroid/2.4.9");
+        settings.setUserAgentString(settings.getUserAgentString() + " CombatEquipmentAndroid/2.4.10");
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);

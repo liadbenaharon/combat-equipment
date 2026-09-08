@@ -6,7 +6,7 @@
 
 - Application ID: `com.liadbenaharon.combatequipment`
 - כתובת: `https://liadbenaharon.github.io/combat-equipment/`
-- גרסה: `2.4.9` / version code `259`
+- גרסה: `2.4.10` / version code `260`
 
 החבילה משתמשת כעת במעטפת Android מובנית במסך מלא. היא אינה מציגה שורת כתובת של Chrome. קישורים חיצוניים, כולל מסך ההתחברות של Google, נפתחים באפליקציה המתאימה וחוזרים אל האפליקציה דרך App Link מאומת.
 - `compileSdk` ו־`targetSdk`: API 36

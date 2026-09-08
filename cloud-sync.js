@@ -3,6 +3,7 @@ import {createClient} from '@supabase/supabase-js';
 const config=window.COMBAT_CLOUD||{};
 const APP_KEYS=()=>Object.values(window.CombatData?.KEYS||{});
 const WORKSPACE_KEY='combatCloudWorkspaceV1';
+const DEMO_KEY='combatReviewDemoV1';
 const READY=typeof config.url==='string'&&config.url.startsWith('https://')&&
   typeof config.publishableKey==='string'&&!config.publishableKey.startsWith('REPLACE_');
 
@@ -39,8 +40,23 @@ function addUi(){
 
 function signedOutUi(){
   $('cloudAccountButton').textContent='כניסה עם Google';$('cloudAccountButton').dataset.online='false';
-  $('cloudAccountBody').innerHTML=`<div class="cloud-panel"><h3>שמירה מאובטחת בענן</h3><p class="mini">הנתונים במכשיר לא יועלו בלי אישור מפורש. לאחר הכניסה כל מאמן רואה רק את הנתונים שלו.</p><div class="cloud-actions"><button id="googleSignIn" class="btn primary" type="button">כניסה עם Google</button></div></div>`;
+  $('cloudAccountBody').innerHTML=`<div class="cloud-panel"><h3>שמירה מאובטחת בענן</h3><p class="mini">הנתונים במכשיר לא יועלו בלי אישור מפורש. לאחר הכניסה כל מאמן רואה רק את הנתונים שלו.</p><div class="cloud-actions"><button id="googleSignIn" class="btn primary" type="button">כניסה עם Google</button><button id="startDemo" class="btn" type="button">כניסה למצב הדגמה</button></div><p class="mini">מצב ההדגמה מאפשר לבדוק את כל כלי ניהול הציוד במכשיר ללא חשבון וללא העלאת נתונים לענן.</p></div>`;
   $('googleSignIn').onclick=signIn;
+  $('startDemo').onclick=startDemo;
+}
+
+function demoUi(){
+  $('cloudAccountButton').textContent='מצב הדגמה';$('cloudAccountButton').dataset.online='false';
+  $('cloudAccountBody').innerHTML='<div class="cloud-panel"><div class="cloud-user">מצב הדגמה פעיל</div><div class="cloud-status">הציוד, השיוכים, ההחזרות, הנוכחות וההיסטוריה זמינים לבדיקה ללא התחברות. הנתונים נשמרים במכשיר בלבד ואינם נשלחים לענן.</div><div class="cloud-actions"><button id="exitDemo" class="btn" type="button">יציאה ממצב הדגמה</button><button id="demoGoogleSignIn" class="btn primary" type="button">כניסה עם Google לסנכרון</button></div></div>';
+  $('exitDemo').onclick=()=>{sessionStorage.removeItem(DEMO_KEY);signedOutUi()};
+  $('demoGoogleSignIn').onclick=()=>{sessionStorage.removeItem(DEMO_KEY);signIn()};
+}
+
+function startDemo(){
+  sessionStorage.setItem(DEMO_KEY,'1');
+  demoUi();
+  $('cloudAccountModal')?.classList.remove('show');
+  announce('מצב הדגמה פעיל — כל הנתונים נשמרים במכשיר בלבד');
 }
 
 function unavailableUi(){
@@ -182,6 +198,7 @@ async function start(){
   watchStorage();
   const {data:{session},error}=await client.auth.getSession();
   if(error)announce('שגיאה בפתיחת החשבון: '+error.message,'error');
+  if(!session&&sessionStorage.getItem(DEMO_KEY)==='1'){demoUi();window.dispatchEvent(new CustomEvent('combat-cloud-ready'));return}
   await onSession(session);
   client.auth.onAuthStateChange((event,nextSession)=>{
     if(event==='SIGNED_OUT')setTimeout(()=>onSession(null),0);

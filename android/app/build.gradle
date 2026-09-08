@@ -18,8 +18,8 @@ android {
         applicationId 'com.liadbenaharon.combatequipment'
         minSdk 24
         targetSdk 36
-        versionCode 259
-        versionName '2.4.9'
+        versionCode 260
+        versionName '2.4.10'
     }
 
     signingConfigs {
