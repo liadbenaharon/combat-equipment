@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.liadbenaharon.combatequipment",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FINGERPRINT"
+        "B8:94:BE:85:76:14:33:BB:0B:92:65:7A:32:04:07:BA:4D:11:76:48:BE:06:B9:B4:5B:4E:C9:DD:05:BA:00:34",
+        "A8:2B:52:E5:97:CE:94:61:A9:3A:F6:89:AD:A6:73:8D:0E:2C:48:D2:46:7D:7D:03:84:37:D7:62:05:4A:AB:F4"
       ]
     }
   }

@@ -6,7 +6,7 @@
 
 - Application ID: `com.liadbenaharon.combatequipment`
 - כתובת: `https://liadbenaharon.github.io/combat-equipment/`
-- גרסה: `2.4.6` / version code `256`
+- גרסה: `2.4.7` / version code `257`
 - `compileSdk` ו־`targetSdk`: API 36
 - מינימום: Android 7.0 / API 24
 - הרשאה יחידה: גישה לאינטרנט
@@ -43,7 +43,7 @@ gradle bundleRelease
 
 ## Digital Asset Links — חובה לפני פרסום
 
-לאחר הפעלת Play App Signing, העתיקו את טביעת SHA-256 של **App signing certificate** מ־Play Console, החליפו את הערך ב־[`assetlinks.template.json`](assetlinks.template.json), ופרסמו את הקובץ בכתובת המדויקת:
+טביעות ה־SHA-256 של **App signing certificate** כבר מוגדרות ב־[`assetlinks.template.json`](assetlinks.template.json). יש לפרסם את הקובץ בכתובת המדויקת:
 
 `https://liadbenaharon.github.io/.well-known/assetlinks.json`
 

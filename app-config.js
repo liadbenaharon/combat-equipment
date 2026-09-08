@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   root.COMBAT_APP=Object.freeze({
-    version:'2.4.6',
+    version:'2.4.7',
     cache:'combat-equipment-v66',
     dataFormat:3
   });

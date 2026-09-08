@@ -18,8 +18,8 @@
   "webManifestUrl": "https://liadbenaharon.github.io/combat-equipment/manifest.webmanifest",
   "fallbackType": "customtabs",
   "splashScreenFadeOutDuration": 300,
-  "appVersion": "2.4.6",
-  "appVersionCode": 256,
+  "appVersion": "2.4.7",
+  "appVersionCode": 257,
   "signingKey": {
     "path": "UPLOAD_KEYSTORE_PATH_NOT_COMMITTED",
     "alias": "UPLOAD_KEY_ALIAS"

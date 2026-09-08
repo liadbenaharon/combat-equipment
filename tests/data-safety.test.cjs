@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.6'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.7'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.6');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.7');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.6');
-  assert.equal(twa.appVersionCode,256);
+  assert.equal(twa.appVersion,'2.4.7');
+  assert.equal(twa.appVersionCode,257);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 256/);
+  assert.match(gradle,/versionCode 257/);
   assert.match(gradle,/androidbrowserhelper:2\.7\.3/);
   assert.deepEqual([...androidManifest.matchAll(/<uses-permission[^>]+android:name="([^"]+)"/g)].map(match=>match[1]),['android.permission.INTERNET']);
   assert.match(androidManifest,/android:usesCleartextTraffic="false"/);
@@ -111,6 +111,22 @@ test('Google Play wrapper preparation stays aligned with the web release',()=>{
   assert.match(androidManifest,/android:pathPrefix="\/combat-equipment\/"/);
   assert.match(workflow,/bundleRelease/);
   assert.match(fs.readFileSync(path.join(root,'android','README.md'),'utf8'),/Digital Asset Links/);
+});
+
+test('Android splash image provider exposes the files directory used by the TWA helper',()=>{
+  const paths=fs.readFileSync(path.join(root,'android','app','src','main','res','xml','filepaths.xml'),'utf8');
+  assert.match(paths,/<files-path name="twa_splash" path="twa_splash\/"\s*\/>/);
+  assert.doesNotMatch(paths,/<cache-path[^>]+twa_splash/);
+});
+
+test('Digital Asset Links template includes both Google Play app-signing certificates',()=>{
+  const links=JSON.parse(fs.readFileSync(path.join(root,'android','assetlinks.template.json'),'utf8'));
+  const target=links[0].target;
+  assert.equal(target.package_name,'com.liadbenaharon.combatequipment');
+  assert.deepEqual(target.sha256_cert_fingerprints,[
+    'B8:94:BE:85:76:14:33:BB:0B:92:65:7A:32:04:07:BA:4D:11:76:48:BE:06:B9:B4:5B:4E:C9:DD:05:BA:00:34',
+    'A8:2B:52:E5:97:CE:94:61:A9:3A:F6:89:AD:A6:73:8D:0E:2C:48:D2:46:7D:7D:03:84:37:D7:62:05:4A:AB:F4'
+  ]);
 });
 
 test('cloud client points at the active Supabase project hostname',()=>{
