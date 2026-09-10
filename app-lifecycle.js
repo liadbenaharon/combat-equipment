@@ -8,6 +8,7 @@
     clearTimeout(statusTimer);node.dataset.type=type;node.textContent=message;node.hidden=false;
     if(duration>0)statusTimer=setTimeout(()=>{node.hidden=true;node.textContent=''},duration);
   }
+  window.combatAnnounce=announce;
   function setVersion(){
     const title=document.querySelector('.headline h1');if(!title)return;
     document.querySelectorAll('.app-version,.app-version-fixed').forEach(el=>el.remove());
@@ -58,9 +59,9 @@
       .app-status{position:fixed;z-index:120;inset:auto 12px calc(92px + env(safe-area-inset-bottom)) 12px;max-width:560px;margin:auto;padding:11px 16px;border-radius:12px;background:#26301f;border:1px solid #718360;box-shadow:0 8px 24px #0008;text-align:center;font-weight:800}
       .app-status[data-type="error"]{background:#4a211d;border-color:#d17669}.app-status[data-type="offline"]{background:#443819;border-color:#b89a43}
       .app-update{position:fixed;z-index:130;inset:12px 12px auto 12px;max-width:560px;margin:auto;padding:13px 18px;border:0;border-radius:14px;background:#f07a22;color:#17110d;font:inherit;font-weight:900;box-shadow:0 8px 28px #000a}
-      .data-tools{margin-top:18px}.data-tools h2{margin-top:0}.data-tool-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.import-label{display:grid;place-items:center;cursor:pointer}.import-label input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+      .data-tools,.assignment-transfer{margin-top:18px;padding:16px}.data-tools h2,.assignment-transfer h2{margin-top:0}.data-tool-actions,.assignment-transfer-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.import-label{display:grid;place-items:center;cursor:pointer;position:relative}.import-label input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
       .floating{padding-bottom:max(12px,env(safe-area-inset-bottom))}
-      @media(max-width:420px){.data-tool-actions{grid-template-columns:1fr}.headline{align-items:flex-start}.headline h1{font-size:19px}.badge{font-size:11px}.floating{gap:7px}.floating .btn{font-size:13px;padding-inline:9px}}
+      @media(max-width:420px){.data-tool-actions,.assignment-transfer-actions{grid-template-columns:1fr}.headline{align-items:flex-start}.headline h1{font-size:19px}.badge{font-size:11px}.floating{gap:7px}.floating .btn{font-size:13px;padding-inline:9px}}
       @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
     `;document.head.appendChild(style);
   }

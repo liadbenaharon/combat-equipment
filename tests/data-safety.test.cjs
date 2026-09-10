@@ -68,9 +68,9 @@ test('transaction rolls back every earlier write when a later write fails',()=>{
 });
 
 test('all visible version writers use the central version',()=>{
-  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.10'/);
+  const config=fs.readFileSync(path.join(root,'app-config.js'),'utf8');assert.match(config,/version:'2\.4\.11'/);
   for(const file of ['equipment-icons.js','quantity-shortcut.js','history-collapse.js','attendance.js','contacts-count.js','app-lifecycle.js'])assert.match(fs.readFileSync(path.join(root,file),'utf8'),/COMBAT_APP/,file);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.10');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.4.11');
 });
 
 test('backup success status is automatically dismissed',()=>{
@@ -97,13 +97,13 @@ test('Google Play native shell stays aligned with the web release',()=>{
   assert.equal(web.scope,'/combat-equipment/');
   assert.equal(twa.packageId,'com.liadbenaharon.combatequipment');
   assert.equal(twa.startUrl,web.start_url);
-  assert.equal(twa.appVersion,'2.4.10');
-  assert.equal(twa.appVersionCode,260);
+  assert.equal(twa.appVersion,'2.4.11');
+  assert.equal(twa.appVersionCode,261);
   assert.equal(twa.enableNotifications,false);
   assert.match(gradle,/applicationId 'com\.liadbenaharon\.combatequipment'/);
   assert.match(gradle,/compileSdk 36/);
   assert.match(gradle,/targetSdk 36/);
-  assert.match(gradle,/versionCode 260/);
+  assert.match(gradle,/versionCode 261/);
   assert.match(gradle,/minifyEnabled false/);
   assert.match(gradle,/shrinkResources false/);
   assert.doesNotMatch(gradle,/androidbrowserhelper/);

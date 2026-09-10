@@ -29,12 +29,13 @@ public final class MainActivity extends Activity {
     private static final String APP_PATH = "/combat-equipment/";
     private static final String SUPABASE_HOST = "rryvwztjrbvsczyamrtu.supabase.co";
     private static final int PICK_FILE_REQUEST = 1401;
-    private static final int SAVE_BACKUP_REQUEST = 1402;
+    private static final int SAVE_FILE_REQUEST = 1402;
 
     private WebView webView;
     private ProgressBar progress;
     private ValueCallback<Uri[]> filePickerCallback;
-    private String pendingBackup;
+    private String pendingFile;
+    private String pendingMimeType;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,7 +75,7 @@ public final class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " CombatEquipmentAndroid/2.4.10");
+        settings.setUserAgentString(settings.getUserAgentString() + " CombatEquipmentAndroid/2.4.11");
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
@@ -95,7 +96,7 @@ public final class MainActivity extends Activity {
                 filePickerCallback = callback;
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("application/json");
+                intent.setType("*/*");
                 try {
                     startActivityForResult(intent, PICK_FILE_REQUEST);
                     return true;
@@ -130,16 +131,23 @@ public final class MainActivity extends Activity {
     private final class NativeBridge {
         @JavascriptInterface
         public void saveBackup(String contents, String filename) {
+            saveFile(contents, filename, "application/json");
+        }
+
+        @JavascriptInterface
+        public void saveFile(String contents, String filename, String mimeType) {
             runOnUiThread(() -> {
-                pendingBackup = contents;
+                pendingFile = contents;
+                pendingMimeType = mimeType == null || mimeType.isEmpty() ? "application/octet-stream" : mimeType;
                 Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("application/json");
+                intent.setType(pendingMimeType);
                 intent.putExtra(Intent.EXTRA_TITLE, filename);
                 try {
-                    startActivityForResult(intent, SAVE_BACKUP_REQUEST);
+                    startActivityForResult(intent, SAVE_FILE_REQUEST);
                 } catch (ActivityNotFoundException error) {
-                    pendingBackup = null;
+                    pendingFile = null;
+                    pendingMimeType = null;
                     Toast.makeText(MainActivity.this, R.string.loading_error, Toast.LENGTH_SHORT).show();
                 }
             });
@@ -210,15 +218,16 @@ public final class MainActivity extends Activity {
             filePickerCallback = null;
             return;
         }
-        if (requestCode == SAVE_BACKUP_REQUEST) {
-            if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingBackup != null) {
+        if (requestCode == SAVE_FILE_REQUEST) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingFile != null) {
                 try (OutputStream stream = getContentResolver().openOutputStream(data.getData())) {
-                    if (stream != null) stream.write(pendingBackup.getBytes(StandardCharsets.UTF_8));
+                    if (stream != null) stream.write(pendingFile.getBytes(StandardCharsets.UTF_8));
                 } catch (Exception error) {
                     Toast.makeText(this, R.string.loading_error, Toast.LENGTH_LONG).show();
                 }
             }
-            pendingBackup = null;
+            pendingFile = null;
+            pendingMimeType = null;
         }
     }
 
