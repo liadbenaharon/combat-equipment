@@ -20,6 +20,16 @@ test('assignment CSV exports every saved trainee and current quantity in an Exce
   assert.deepEqual(JSON.parse(JSON.stringify(api.parseRows(csv))),[['שם','אלונקה','ווסט ירוק'],['דני, כהן','1',''],['נועה','','']]);
 });
 
+test('workout picker exposes the current workout and saved workout assignments',()=>{
+  const current=sample(),saved=sample();saved.equipment[0].assignments=[{name:'נועה',qty:2,units:[0,1]}];
+  const options=api.workoutOptions(current,[{id:123,date:'7 בספט׳ 2026, 21:40',equipment:saved.equipment},{id:456,date:'ללא ציוד'}]);
+  assert.equal(options.length,2);
+  assert.equal(options[0].key,'current');
+  assert.equal(options[1].key,'history:123');
+  assert.equal(options[1].label,'7 בספט׳ 2026, 21:40');
+  assert.match(api.exportCsv(options[1].state,[]),/נועה,2,/);
+});
+
 test('edited CSV replaces active assignments and allocates numbered equipment units',()=>{
   const state=sample(),plan=api.importPlan('\ufeffשם,אלונקה,ווסט ירוק\r\nדני,2,1\r\nנועה,1,2\r\n',state);
   assert.equal(plan.people,2);assert.equal(plan.total,6);api.applyPlan(state,plan);
