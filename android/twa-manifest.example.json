@@ -17,8 +17,8 @@
   "maskableIconUrl": "https://liadbenaharon.github.io/combat-equipment/icon-512.png",
   "webManifestUrl": "https://liadbenaharon.github.io/combat-equipment/manifest.webmanifest",
   "fallbackType": "customtabs",
-  "appVersion": "2.4.12",
-  "appVersionCode": 262,
+  "appVersion": "2.4.13",
+  "appVersionCode": 263,
   "signingKey": {
     "path": "UPLOAD_KEYSTORE_PATH_NOT_COMMITTED",
     "alias": "UPLOAD_KEY_ALIAS"
