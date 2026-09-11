@@ -20,6 +20,29 @@ test('assignment CSV exports every saved trainee and current quantity in an Exce
   assert.deepEqual(JSON.parse(JSON.stringify(api.parseRows(csv))),[['שם','אלונקה','ווסט ירוק'],['דני, כהן','1',''],['נועה','','']]);
 });
 
+test('editable assignment CSV uses three narrow columns and one row per item',()=>{
+  const state=sample();state.equipment[1].assignments=[{name:'דני, כהן',qty:2,units:[0,1]}];
+  const csv=api.exportEditableCsv(state,['דני, כהן','נועה']);
+  assert.ok(csv.startsWith('\ufeffשם,ציוד,כמות'));
+  assert.match(csv,/"דני, כהן",אלונקה,1/);
+  assert.match(csv,/"דני, כהן",ווסט ירוק,2/);
+  assert.match(csv,/נועה,,/);
+});
+
+test('editable three-column CSV imports assignments and combines repeated rows',()=>{
+  const state=sample(),plan=api.importPlan('\ufeffשם,ציוד,כמות\r\nדני,אלונקה,1\r\nדני,אלונקה,1\r\nנועה,ווסט ירוק,2\r\nללא ציוד,,\r\n',state);
+  assert.equal(plan.people,2);assert.equal(plan.total,4);assert.equal(plan.rows,3);
+  api.applyPlan(state,plan);
+  assert.deepEqual(JSON.parse(JSON.stringify(state.equipment[0].assignments)),[{name:'דני',qty:2,units:[0,1]}]);
+  assert.deepEqual(JSON.parse(JSON.stringify(state.equipment[1].assignments)),[{name:'נועה',qty:2,units:[0,1]}]);
+});
+
+test('editable CSV validates equipment names, required quantities and stock',()=>{
+  assert.throws(()=>api.importPlan('שם,ציוד,כמות\nדני,חבל,1',sample()),/לא מוכר/);
+  assert.throws(()=>api.importPlan('שם,ציוד,כמות\nדני,אלונקה,',sample()),/חסרה כמות/);
+  assert.throws(()=>api.importPlan('שם,ציוד,כמות\nדני,אלונקה,4',sample()),/יש רק 3/);
+});
+
 test('workout picker exposes the current workout and saved workout assignments',()=>{
   const current=sample(),saved=sample();saved.equipment[0].assignments=[{name:'נועה',qty:2,units:[0,1]}];
   const options=api.workoutOptions(current,[{id:123,date:'7 בספט׳ 2026, 21:40',equipment:saved.equipment},{id:456,date:'ללא ציוד'}]);
