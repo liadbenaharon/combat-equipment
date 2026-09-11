@@ -1,6 +1,6 @@
 {
   "name": "combat-equipment",
-  "version": "2.4.12",
+  "version": "2.4.13",
   "private": true,
   "scripts": {
     "build:cloud": "esbuild cloud-sync.js --bundle --minify --format=iife --target=es2020 --outfile=cloud-bundle.js",
