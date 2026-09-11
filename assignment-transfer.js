@@ -27,6 +27,15 @@
     const table=assignmentTable(currentState,savedNames),lines=[[NAME_HEADER,...table.columns.map(column=>column.label)],...table.rows.map(row=>[row.name,...row.amounts.map(value=>value||'')])];
     return '\ufeff'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')+'\r\n';
   }
+  function workoutOptions(currentState,history=[]){
+    const options=[{key:'current',label:'האימון הנוכחי',state:currentState}];
+    (Array.isArray(history)?history:[]).forEach((workout,index)=>{
+      if(!Array.isArray(workout?.equipment))return;
+      const id=workout.id===undefined||workout.id===null?`index-${index}`:String(workout.id);
+      options.push({key:`history:${id}`,label:clean(workout.date)||`אימון שמור ${index+1}`,state:{equipment:workout.equipment}});
+    });
+    return options;
+  }
   function detectDelimiter(text){const first=String(text||'').replace(/^\ufeff/,'').split(/\r?\n/,1)[0]||'';return ['\t',';',','].sort((a,b)=>(first.split(b).length-first.split(a).length))[0]}
   function parseRows(text){
     const delimiter=detectDelimiter(text),source=String(text||'').replace(/^\ufeff/,''),rows=[];let row=[],cell='',quoted=false;
@@ -55,10 +64,11 @@
   function applyPlan(currentState,plan){
     currentState.equipment.forEach((item,index)=>{let unit=0;item.checked=Array(Number(item.qty)||0).fill(false);item.assignments=(plan.assignments[index]||[]).map(assignment=>{const units=Array.from({length:assignment.qty},()=>unit++);units.forEach(position=>{item.checked[position]=true});return {...assignment,units}})});return currentState;
   }
-  const api={columnsFor,assignmentTable,exportCsv,parseRows,importPlan,applyPlan};root.CombatAssignmentTransfer=api;
+  const api={columnsFor,assignmentTable,exportCsv,workoutOptions,parseRows,importPlan,applyPlan};root.CombatAssignmentTransfer=api;
   if(typeof document==='undefined')return;
 
   function savedTrainees(){try{return JSON.parse(localStorage.getItem('combatEquipmentTraineesV1')||'[]')}catch{return[]}}
+  function savedWorkouts(){try{return JSON.parse(localStorage.getItem('combatEquipmentHistoryV1')||'[]')}catch{return[]}}
   function saveFile(contents,filename){
     if(root.CombatAndroid?.saveFile){root.CombatAndroid.saveFile(contents,filename,'text/csv');return}
     const blob=new Blob([contents],{type:'text/csv;charset=utf-8'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),0);
@@ -66,9 +76,12 @@
   function announce(message,type='info'){if(typeof root.combatAnnounce==='function')root.combatAnnounce(message,type);else alert(message)}
   function install(){
     const summary=document.getElementById('summary');if(!summary||document.getElementById('assignmentTransfer'))return;
-    const card=document.createElement('section');card.id='assignmentTransfer';card.className='card assignment-transfer';card.innerHTML='<h2>שיתוף רשימת שיוכים</h2><p class="mini">הורידו טבלה, ערכו כמויות ושלחו אותה חזרה. הייבוא מחליף את השיוכים באימון הפעיל בלבד.</p><div class="assignment-transfer-actions"><button type="button" class="btn" id="exportAssignments">הורדת טבלת שיוכים</button><label class="btn import-label">ייבוא טבלה מעודכנת<input id="importAssignments" type="file" accept=".csv,text/csv,text/plain,application/vnd.ms-excel"></label></div>';
+    const card=document.createElement('section');card.id='assignmentTransfer';card.className='card assignment-transfer';card.innerHTML='<h2>שיתוף רשימת שיוכים</h2><p class="mini">בחרו אימון להורדה, ערכו כמויות ושלחו את הטבלה חזרה. הייבוא מחליף את השיוכים באימון הפעיל בלבד.</p><div class="field assignment-workout-field"><label for="exportAssignmentWorkout">מאיזה אימון להוריד?</label><select id="exportAssignmentWorkout" class="input"></select></div><div class="assignment-transfer-actions"><button type="button" class="btn" id="exportAssignments">הורדת טבלת שיוכים</button><label class="btn import-label">ייבוא טבלה מעודכנת<input id="importAssignments" type="file" accept=".csv,text/csv,text/plain,application/vnd.ms-excel"></label></div>';
     summary.insertBefore(card,document.getElementById('dataTools')||null);
-    document.getElementById('exportAssignments').onclick=()=>{try{saveFile(exportCsv(state,savedTrainees()),`combat-equipment-assignments-${new Date().toISOString().slice(0,10)}.csv`);announce('טבלת השיוכים מוכנה לשמירה')}catch{announce('לא ניתן ליצור את טבלת השיוכים','error')}};
+    const picker=document.getElementById('exportAssignmentWorkout');
+    const refreshPicker=()=>{const selected=picker.value,options=workoutOptions(state,savedWorkouts());picker.innerHTML=options.map(option=>`<option value="${option.key.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">${option.label.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</option>`).join('');picker.value=options.some(option=>option.key===selected)?selected:'current';return options};
+    refreshPicker();picker.addEventListener('focus',refreshPicker);picker.addEventListener('pointerdown',refreshPicker);root.addEventListener?.('combat-cloud-data-loaded',refreshPicker);
+    document.getElementById('exportAssignments').onclick=()=>{try{const options=refreshPicker(),selected=options.find(option=>option.key===picker.value)||options[0],suffix=selected.key==='current'?new Date().toISOString().slice(0,10):selected.key.slice(8).replace(/[^a-zA-Z0-9_-]/g,'-');saveFile(exportCsv(selected.state,savedTrainees()),`combat-equipment-assignments-${suffix}.csv`);announce(`טבלת השיוכים של ${selected.label} מוכנה לשמירה`)}catch{announce('לא ניתן ליצור את טבלת השיוכים','error')}};
     document.getElementById('importAssignments').onchange=async event=>{const input=event.currentTarget,file=input.files?.[0];if(!file)return;try{if(file.size>2*1024*1024)throw new Error('הקובץ גדול מדי. הגודל המרבי הוא 2MB');const plan=importPlan(await file.text(),state);if(!confirm(`נמצאו ${plan.people} מתאמנים עם ${plan.total} יחידות ציוד.\n\nהייבוא יחליף את כל השיוכים באימון הפעיל. להמשיך?`))return;applyPlan(state,plan);for(const list of plan.assignments)for(const assignment of list)root.rememberTrainee?.(assignment.name);if(save()===false)throw new Error('השינוי לא נשמר');announce(`יובאו ${plan.total} יחידות ציוד עבור ${plan.people} מתאמנים`)}catch(error){announce(error?.message||'לא ניתן לייבא את הטבלה','error')}finally{input.value=''}};
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
