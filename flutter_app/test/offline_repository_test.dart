@@ -65,7 +65,7 @@ void main() {
               ..where((row) => row.operation.equals('delete')))
             .getSingle();
 
-    expect(workout.deletedAt, now);
+    expect(workout.deletedAt?.toUtc(), now);
     expect(deleteMutation.baseVersion, 0);
   });
 }
