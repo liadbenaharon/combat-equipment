@@ -1,13 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+import 'core/config/app_config.dart';
+import 'core/database/app_database.dart';
+import 'features/auth/presentation/auth_gate.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: CombatEquipmentApp()));
+  SupabaseClient? client;
+  if (AppConfig.hasCloudConfiguration) {
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl,
+      anonKey: AppConfig.supabasePublishableKey,
+    );
+    client = Supabase.instance.client;
+  }
+  runApp(
+    ProviderScope(
+      child: CombatEquipmentApp(database: AppDatabase(), client: client),
+    ),
+  );
 }
 
 class CombatEquipmentApp extends StatelessWidget {
-  const CombatEquipmentApp({super.key});
+  const CombatEquipmentApp({
+    required this.database,
+    required this.client,
+    super.key,
+  });
+
+  final AppDatabase database;
+  final SupabaseClient? client;
 
   @override
   Widget build(BuildContext context) {
@@ -23,43 +47,9 @@ class CombatEquipmentApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF07150D),
         useMaterial3: true,
       ),
-      home: const Directionality(
+      home: Directionality(
         textDirection: TextDirection.rtl,
-        child: OfflineFoundationPage(),
-      ),
-    );
-  }
-}
-
-class OfflineFoundationPage extends StatelessWidget {
-  const OfflineFoundationPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('ניהול ציוד')),
-      body: const SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(Icons.inventory_2_rounded, size: 72),
-              SizedBox(height: 20),
-              Text(
-                'הגרסה המקומית החדשה',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'האימונים והציוד נשמרים קודם בטלפון. החיבור ל-Supabase מסנכרן אותם כשיש אינטרנט.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 17, height: 1.5),
-              ),
-            ],
-          ),
-        ),
+        child: AuthGate(database: database, client: client),
       ),
     );
   }

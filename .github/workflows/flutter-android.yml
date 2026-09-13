@@ -65,7 +65,14 @@ jobs:
         run: flutter test
 
       - name: Build debug APK
-        run: flutter build apk --debug
+        run: |
+          SUPABASE_URL="$(sed -n "s/.*url:'\([^']*\)'.*/\1/p" ../cloud-config.js)"
+          SUPABASE_PUBLISHABLE_KEY="$(sed -n "s/.*publishableKey:'\([^']*\)'.*/\1/p" ../cloud-config.js)"
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_PUBLISHABLE_KEY"
+          flutter build apk --debug \
+            --dart-define="SUPABASE_URL=$SUPABASE_URL" \
+            --dart-define="SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
