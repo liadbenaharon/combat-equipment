@@ -152,7 +152,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                   return ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                     itemCount: workouts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final workout = workouts[index];
                       return Card(

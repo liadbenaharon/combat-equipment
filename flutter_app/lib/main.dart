@@ -12,7 +12,7 @@ Future<void> main() async {
   if (AppConfig.hasCloudConfiguration) {
     await Supabase.initialize(
       url: AppConfig.supabaseUrl,
-      anonKey: AppConfig.supabasePublishableKey,
+      publishableKey: AppConfig.supabasePublishableKey,
     );
     client = Supabase.instance.client;
   }
