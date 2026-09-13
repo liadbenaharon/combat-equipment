@@ -60,11 +60,9 @@ void main() {
       database.workouts,
     )..where((row) => row.id.equals(workoutId))).getSingle();
     final deleteMutation =
-        await (database.select(database.syncQueueItems)..where(
-              (row) =>
-                  row.entityId.equals(workoutId) &
-                  row.operation.equals('delete'),
-            ))
+        await (database.select(database.syncQueueItems)
+              ..where((row) => row.entityId.equals(workoutId))
+              ..where((row) => row.operation.equals('delete')))
             .getSingle();
 
     expect(workout.deletedAt, now);

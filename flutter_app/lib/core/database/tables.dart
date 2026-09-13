@@ -57,7 +57,7 @@ class EquipmentItems extends Table {
   TextColumn get workspaceId => text().references(Workspaces, #id)();
   TextColumn get name => text()();
   IntColumn get totalQuantity =>
-      integer().check(totalQuantity.isBiggerOrEqualValue(0))();
+      integer().customConstraint('NOT NULL CHECK (total_quantity >= 0)')();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   IntColumn get version => integer().withDefault(const Constant(0))();
@@ -73,7 +73,8 @@ class Assignments extends Table {
   TextColumn get workoutId => text().references(Workouts, #id)();
   TextColumn get traineeId => text().references(Trainees, #id)();
   TextColumn get equipmentId => text().references(EquipmentItems, #id)();
-  IntColumn get quantity => integer().check(quantity.isBiggerThanValue(0))();
+  IntColumn get quantity =>
+      integer().customConstraint('NOT NULL CHECK (quantity > 0)')();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   IntColumn get version => integer().withDefault(const Constant(0))();
@@ -88,7 +89,7 @@ class EquipmentReturns extends Table {
   TextColumn get workspaceId => text().references(Workspaces, #id)();
   TextColumn get assignmentId => text().references(Assignments, #id)();
   IntColumn get returnedQuantity =>
-      integer().check(returnedQuantity.isBiggerOrEqualValue(0))();
+      integer().customConstraint('NOT NULL CHECK (returned_quantity >= 0)')();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   IntColumn get version => integer().withDefault(const Constant(0))();
