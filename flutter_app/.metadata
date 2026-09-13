@@ -1,0 +1,18 @@
+version:
+  revision: "local-stable-sdk"
+  channel: "stable"
+
+project_type: app
+
+migration:
+  platforms:
+    - platform: root
+      create_revision: local-stable-sdk
+      base_revision: local-stable-sdk
+    - platform: android
+      create_revision: local-stable-sdk
+      base_revision: local-stable-sdk
+
+  unmanaged_files:
+    - 'lib/main.dart'
+    - 'android/app/src/main/AndroidManifest.xml'
