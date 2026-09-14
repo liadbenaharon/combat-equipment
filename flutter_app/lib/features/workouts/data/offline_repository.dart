@@ -107,7 +107,7 @@ class OfflineRepository {
               row.deletedAt.isNull(),
         ))
         .get();
-    return rows.fold(0, (sum, row) => sum + row.quantity);
+    return rows.fold<int>(0, (sum, row) => sum + row.quantity);
   }
 
   Future<String> addTrainee({

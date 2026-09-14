@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/migration/legacy_cloud_importer.dart';
 import '../../../core/session/session_bootstrapper.dart';
 import '../../../core/sync/database_remote_change_applier.dart';
 import '../../../core/sync/supabase_sync_gateway.dart';
@@ -39,7 +40,34 @@ class _AuthGateState extends State<AuthGate> {
   Future<LocalSession?> _resolveSession() async {
     final bootstrapper = SessionBootstrapper(widget.database, widget.client);
     final user = widget.client?.auth.currentUser;
-    if (user != null) return bootstrapper.fromRemoteUser(user);
+    if (user != null) {
+      final session = await bootstrapper.fromRemoteUser(user);
+      final client = widget.client;
+      if (client != null) {
+        final repository = OfflineRepository(widget.database);
+        final syncEngine = SyncEngine(
+          widget.database,
+          SupabaseSyncGateway(client),
+          DatabaseRemoteChangeApplier(widget.database),
+        );
+        try {
+          await syncEngine.syncWorkspace(session.workspaceId);
+        } catch (_) {
+          // Offline startup remains usable with the local database.
+        }
+        try {
+          final imported = await LegacyCloudImporter(
+            widget.database,
+            client,
+            repository,
+          ).importIfNeeded(session.workspaceId);
+          if (imported) await syncEngine.syncWorkspace(session.workspaceId);
+        } catch (_) {
+          // Import will be retried only while the normalized workspace is empty.
+        }
+      }
+      return session;
+    }
     return bootstrapper.latestLocalSession();
   }
 
