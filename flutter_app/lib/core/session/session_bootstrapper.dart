@@ -66,8 +66,40 @@ class SessionBootstrapper {
               createdAt: now,
               updatedAt: now,
             ),
-          );
+      );
     });
+
+    if (role == 'admin' && _client != null) {
+      try {
+        final rows = await _client!
+            .from('workspaces')
+            .select(
+              'id,owner_user_id,name,created_at,updated_at,version,deleted_at',
+            );
+        await _database.transaction(() async {
+          for (final value in rows) {
+            final row = value as Map<String, dynamic>;
+            await _database.into(_database.workspaces).insertOnConflictUpdate(
+              WorkspacesCompanion.insert(
+                id: row['id'] as String,
+                ownerUserId: row['owner_user_id'] as String,
+                name: row['name'] as String,
+                createdAt: DateTime.parse(row['created_at'] as String).toUtc(),
+                updatedAt: DateTime.parse(row['updated_at'] as String).toUtc(),
+                version: Value((row['version'] as num?)?.toInt() ?? 0),
+                deletedAt: Value(
+                  row['deleted_at'] == null
+                      ? null
+                      : DateTime.parse(row['deleted_at'] as String).toUtc(),
+                ),
+              ),
+            );
+          }
+        });
+      } catch (_) {
+        // Previously cached coach workspaces remain available while offline.
+      }
+    }
 
     return LocalSession(
       userId: user.id,

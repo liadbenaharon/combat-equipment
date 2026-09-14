@@ -43,6 +43,27 @@ void main() {
     expect(queue.last.entityId, workoutId);
   });
 
+  test('admin can select every cached coach workspace', () async {
+    final first = await repository.createWorkspace(
+      ownerUserId: 'coach-1',
+      name: 'Coach one',
+    );
+    await repository.createWorkspace(
+      ownerUserId: 'coach-2',
+      name: 'Coach two',
+    );
+
+    final adminView = await repository
+        .watchWorkspaces(userId: 'admin', isAdmin: true)
+        .first;
+    final coachView = await repository
+        .watchWorkspaces(userId: 'coach-1', isAdmin: false)
+        .first;
+
+    expect(adminView, hasLength(2));
+    expect(coachView.map((item) => item.id), [first]);
+  });
+
   test('deleting a workout keeps a tombstone and queues deletion', () async {
     final workspaceId = await repository.createWorkspace(
       ownerUserId: 'coach-1',

@@ -30,10 +30,12 @@ class WorkoutsPage extends StatefulWidget {
 class _WorkoutsPageState extends State<WorkoutsPage> {
   bool _syncing = false;
   String? _notice;
+  late String _selectedWorkspaceId;
 
   @override
   void initState() {
     super.initState();
+    _selectedWorkspaceId = widget.session.workspaceId;
     if (widget.syncEngine != null) _sync(silent: true);
   }
 
@@ -41,7 +43,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     if (_syncing || widget.syncEngine == null) return;
     setState(() => _syncing = true);
     try {
-      await widget.syncEngine!.syncWorkspace(widget.session.workspaceId);
+      await widget.syncEngine!.syncWorkspace(_selectedWorkspaceId);
       if (!silent && mounted) setState(() => _notice = 'הסנכרון הושלם');
     } catch (_) {
       if (!silent && mounted) {
@@ -79,7 +81,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     controller.dispose();
     if (title == null || title.isEmpty) return;
     await widget.repository.createWorkout(
-      workspaceId: widget.session.workspaceId,
+      workspaceId: _selectedWorkspaceId,
       title: title,
       startsAt: DateTime.now(),
     );
@@ -88,7 +90,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
 
   Future<Workout?> _chooseWorkout(String title) async {
     final workouts = await widget.repository.getWorkouts(
-      widget.session.workspaceId,
+      _selectedWorkspaceId,
     );
     if (!mounted) return null;
     if (workouts.isEmpty) {
@@ -157,7 +159,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     if (approved != true) return;
     try {
       final count = await WorkoutFileService(widget.repository).pickAndImport(
-        workspaceId: widget.session.workspaceId,
+        workspaceId: _selectedWorkspaceId,
         targetWorkout: workout,
       );
       if (count == null) return;
@@ -216,10 +218,55 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: Text(
-                '${widget.session.role == 'admin' ? 'אדמין' : 'מאמן'} · ${widget.session.displayName}',
+                widget.session.role == 'admin'
+                    ? 'אדמין · בחירת מאמן'
+                    : 'מאמן · ${widget.session.displayName}',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
+            if (widget.session.role == 'admin')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: StreamBuilder<List<Workspace>>(
+                  stream: widget.repository.watchWorkspaces(
+                    userId: widget.session.userId,
+                    isAdmin: true,
+                  ),
+                  builder: (context, snapshot) {
+                    final workspaces = snapshot.data ?? const [];
+                    final selectedExists = workspaces.any(
+                      (item) => item.id == _selectedWorkspaceId,
+                    );
+                    return DropdownButtonFormField<String>(
+                      initialValue: selectedExists
+                          ? _selectedWorkspaceId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'חשבון מאמן',
+                        prefixIcon: Icon(Icons.manage_accounts_outlined),
+                      ),
+                      items: workspaces
+                          .map(
+                            (workspace) => DropdownMenuItem(
+                              value: workspace.id,
+                              child: Text(workspace.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) async {
+                        if (value == null || value == _selectedWorkspaceId) {
+                          return;
+                        }
+                        setState(() {
+                          _selectedWorkspaceId = value;
+                          _notice = null;
+                        });
+                        await _sync(silent: true);
+                      },
+                    );
+                  },
+                ),
+              ),
             if (_notice != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -228,7 +275,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
             Expanded(
               child: StreamBuilder<List<Workout>>(
                 stream: widget.repository.watchWorkouts(
-                  widget.session.workspaceId,
+                  _selectedWorkspaceId,
                 ),
                 builder: (context, snapshot) {
                   final workouts = snapshot.data ?? const [];
@@ -265,7 +312,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                               MaterialPageRoute<void>(
                                 builder: (_) => WorkoutDetailPage(
                                   workout: workout,
-                                  workspaceId: widget.session.workspaceId,
+                                  workspaceId: _selectedWorkspaceId,
                                   repository: widget.repository,
                                 ),
                               ),

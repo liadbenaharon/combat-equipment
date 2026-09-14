@@ -30,6 +30,19 @@ class OfflineRepository {
     return query.watch();
   }
 
+  Stream<List<Workspace>> watchWorkspaces({
+    required String userId,
+    required bool isAdmin,
+  }) {
+    final query = _database.select(_database.workspaces)
+      ..where((row) => row.deletedAt.isNull())
+      ..orderBy([(row) => OrderingTerm.asc(row.name)]);
+    if (!isAdmin) {
+      query.where((row) => row.ownerUserId.equals(userId));
+    }
+    return query.watch();
+  }
+
   Stream<List<Trainee>> watchTrainees(String workspaceId) {
     final query = _database.select(_database.trainees)
       ..where(
