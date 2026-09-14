@@ -153,4 +153,53 @@ void main() {
     expect(assignment.deletedAt, isNotNull);
     expect(equipmentReturn.deletedAt, isNotNull);
   });
+
+  test('import replacement atomically replaces assignments and returns', () async {
+    final workspaceId = await repository.createWorkspace(
+      ownerUserId: 'coach-1',
+      name: 'Coach one',
+    );
+    final workoutId = await repository.createWorkout(
+      workspaceId: workspaceId,
+      title: 'Training',
+      startsAt: now,
+    );
+    final traineeId = await repository.addTrainee(
+      workspaceId: workspaceId,
+      name: 'Trainee',
+    );
+    final equipmentId = await repository.addEquipment(
+      workspaceId: workspaceId,
+      name: 'Jerrycan',
+      totalQuantity: 4,
+    );
+    await repository.saveAssignment(
+      workspaceId: workspaceId,
+      workoutId: workoutId,
+      traineeId: traineeId,
+      equipmentId: equipmentId,
+      quantity: 1,
+    );
+
+    await repository.replaceWorkoutAssignments(
+      workspaceId: workspaceId,
+      workoutId: workoutId,
+      replacements: [
+        AssignmentReplacement(
+          traineeId: traineeId,
+          equipmentId: equipmentId,
+          quantity: 3,
+          returnedQuantity: 2,
+        ),
+      ],
+    );
+
+    final visible = await repository.getAssignments(workoutId);
+    final allAssignments = await database.select(database.assignments).get();
+    expect(visible, hasLength(1));
+    expect(visible.single.quantity, 3);
+    expect(visible.single.returnedQuantity, 2);
+    expect(allAssignments, hasLength(2));
+    expect(allAssignments.where((row) => row.deletedAt != null), hasLength(1));
+  });
 }

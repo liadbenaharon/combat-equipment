@@ -4,6 +4,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/session/session_bootstrapper.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../data/offline_repository.dart';
+import '../data/workout_file_service.dart';
 import 'workout_detail_page.dart';
 
 class WorkoutsPage extends StatefulWidget {
@@ -85,6 +86,88 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     await _sync(silent: true);
   }
 
+  Future<Workout?> _chooseWorkout(String title) async {
+    final workouts = await widget.repository.getWorkouts(
+      widget.session.workspaceId,
+    );
+    if (!mounted) return null;
+    if (workouts.isEmpty) {
+      setState(() => _notice = 'צריך ליצור אימון קודם');
+      return null;
+    }
+    return showDialog<Workout>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(title),
+        children: workouts
+            .map(
+              (workout) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, workout),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(workout.title),
+                  subtitle: Text(
+                    MaterialLocalizations.of(
+                      context,
+                    ).formatMediumDate(workout.startsAt.toLocal()),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Future<void> _exportWorkout() async {
+    final workout = await _chooseWorkout('מאיזה אימון לייצא?');
+    if (workout == null) return;
+    try {
+      final count = await WorkoutFileService(
+        widget.repository,
+      ).exportAndShare(workout);
+      if (mounted) setState(() => _notice = 'נוצר קובץ עם $count שיוכים');
+    } catch (error) {
+      if (mounted) setState(() => _notice = 'לא ניתן לייצא: $error');
+    }
+  }
+
+  Future<void> _importWorkout() async {
+    final workout = await _chooseWorkout('לאיזה אימון לייבא?');
+    if (workout == null || !mounted) return;
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ייבוא רשימה'),
+        content: Text(
+          'הרשימה בקובץ תחליף את כל השיוכים הקיימים באימון "${workout.title}".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('בחירת קובץ'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true) return;
+    try {
+      final count = await WorkoutFileService(widget.repository).pickAndImport(
+        workspaceId: widget.session.workspaceId,
+        targetWorkout: workout,
+      );
+      if (count == null) return;
+      await _sync(silent: true);
+      if (mounted) setState(() => _notice = 'יובאו $count שיוכים בהצלחה');
+    } catch (error) {
+      if (mounted) setState(() => _notice = 'הייבוא נכשל: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,9 +186,19 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
+              if (value == 'export') _exportWorkout();
+              if (value == 'import') _importWorkout();
               if (value == 'signout') widget.onSignOut();
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'export',
+                child: Text('ייצוא אימון לקובץ'),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: Text('ייבוא רשימה מקובץ'),
+              ),
               PopupMenuItem(value: 'signout', child: Text('יציאה מהחשבון')),
             ],
           ),
@@ -167,15 +260,18 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                             ).formatMediumDate(workout.startsAt.toLocal()),
                           ),
                           trailing: const Icon(Icons.chevron_left),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => WorkoutDetailPage(
-                                workout: workout,
-                                workspaceId: widget.session.workspaceId,
-                                repository: widget.repository,
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => WorkoutDetailPage(
+                                  workout: workout,
+                                  workspaceId: widget.session.workspaceId,
+                                  repository: widget.repository,
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                            await _sync(silent: true);
+                          },
                         ),
                       );
                     },

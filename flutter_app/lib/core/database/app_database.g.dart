@@ -3557,6 +3557,576 @@ class EquipmentReturnsCompanion extends UpdateCompanion<EquipmentReturn> {
   }
 }
 
+class $AttendanceRecordsTable extends AttendanceRecords
+    with TableInfo<$AttendanceRecordsTable, AttendanceRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AttendanceRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _workspaceIdMeta = const VerificationMeta(
+    'workspaceId',
+  );
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+    'workspace_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workspaces (id)',
+    ),
+  );
+  static const VerificationMeta _workoutIdMeta = const VerificationMeta(
+    'workoutId',
+  );
+  @override
+  late final GeneratedColumn<String> workoutId = GeneratedColumn<String>(
+    'workout_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workouts (id)',
+    ),
+  );
+  static const VerificationMeta _traineeIdMeta = const VerificationMeta(
+    'traineeId',
+  );
+  @override
+  late final GeneratedColumn<String> traineeId = GeneratedColumn<String>(
+    'trainee_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES trainees (id)',
+    ),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('unknown'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    workspaceId,
+    workoutId,
+    traineeId,
+    status,
+    createdAt,
+    updatedAt,
+    version,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'attendance_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AttendanceRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+        _workspaceIdMeta,
+        workspaceId.isAcceptableOrUnknown(
+          data['workspace_id']!,
+          _workspaceIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('workout_id')) {
+      context.handle(
+        _workoutIdMeta,
+        workoutId.isAcceptableOrUnknown(data['workout_id']!, _workoutIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_workoutIdMeta);
+    }
+    if (data.containsKey('trainee_id')) {
+      context.handle(
+        _traineeIdMeta,
+        traineeId.isAcceptableOrUnknown(data['trainee_id']!, _traineeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_traineeIdMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AttendanceRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AttendanceRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      workspaceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}workspace_id'],
+      )!,
+      workoutId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}workout_id'],
+      )!,
+      traineeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}trainee_id'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $AttendanceRecordsTable createAlias(String alias) {
+    return $AttendanceRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class AttendanceRecord extends DataClass
+    implements Insertable<AttendanceRecord> {
+  final String id;
+  final String workspaceId;
+  final String workoutId;
+  final String traineeId;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int version;
+  final DateTime? deletedAt;
+  const AttendanceRecord({
+    required this.id,
+    required this.workspaceId,
+    required this.workoutId,
+    required this.traineeId,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.version,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['workout_id'] = Variable<String>(workoutId);
+    map['trainee_id'] = Variable<String>(traineeId);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  AttendanceRecordsCompanion toCompanion(bool nullToAbsent) {
+    return AttendanceRecordsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      workoutId: Value(workoutId),
+      traineeId: Value(traineeId),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      version: Value(version),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory AttendanceRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AttendanceRecord(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      workoutId: serializer.fromJson<String>(json['workoutId']),
+      traineeId: serializer.fromJson<String>(json['traineeId']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      version: serializer.fromJson<int>(json['version']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'workoutId': serializer.toJson<String>(workoutId),
+      'traineeId': serializer.toJson<String>(traineeId),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'version': serializer.toJson<int>(version),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  AttendanceRecord copyWith({
+    String? id,
+    String? workspaceId,
+    String? workoutId,
+    String? traineeId,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? version,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => AttendanceRecord(
+    id: id ?? this.id,
+    workspaceId: workspaceId ?? this.workspaceId,
+    workoutId: workoutId ?? this.workoutId,
+    traineeId: traineeId ?? this.traineeId,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    version: version ?? this.version,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  AttendanceRecord copyWithCompanion(AttendanceRecordsCompanion data) {
+    return AttendanceRecord(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId: data.workspaceId.present
+          ? data.workspaceId.value
+          : this.workspaceId,
+      workoutId: data.workoutId.present ? data.workoutId.value : this.workoutId,
+      traineeId: data.traineeId.present ? data.traineeId.value : this.traineeId,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      version: data.version.present ? data.version.value : this.version,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AttendanceRecord(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('workoutId: $workoutId, ')
+          ..write('traineeId: $traineeId, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    workspaceId,
+    workoutId,
+    traineeId,
+    status,
+    createdAt,
+    updatedAt,
+    version,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AttendanceRecord &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.workoutId == this.workoutId &&
+          other.traineeId == this.traineeId &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.version == this.version &&
+          other.deletedAt == this.deletedAt);
+}
+
+class AttendanceRecordsCompanion extends UpdateCompanion<AttendanceRecord> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> workoutId;
+  final Value<String> traineeId;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> version;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const AttendanceRecordsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.workoutId = const Value.absent(),
+    this.traineeId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AttendanceRecordsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String workoutId,
+    required String traineeId,
+    this.status = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.version = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       workspaceId = Value(workspaceId),
+       workoutId = Value(workoutId),
+       traineeId = Value(traineeId),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<AttendanceRecord> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? workoutId,
+    Expression<String>? traineeId,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? version,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (workoutId != null) 'workout_id': workoutId,
+      if (traineeId != null) 'trainee_id': traineeId,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (version != null) 'version': version,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AttendanceRecordsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? workspaceId,
+    Value<String>? workoutId,
+    Value<String>? traineeId,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? version,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return AttendanceRecordsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      workoutId: workoutId ?? this.workoutId,
+      traineeId: traineeId ?? this.traineeId,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      version: version ?? this.version,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (workoutId.present) {
+      map['workout_id'] = Variable<String>(workoutId.value);
+    }
+    if (traineeId.present) {
+      map['trainee_id'] = Variable<String>(traineeId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AttendanceRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('workoutId: $workoutId, ')
+          ..write('traineeId: $traineeId, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SyncQueueItemsTable extends SyncQueueItems
     with TableInfo<$SyncQueueItemsTable, SyncQueueItem> {
   @override
@@ -5077,6 +5647,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $EquipmentReturnsTable equipmentReturns = $EquipmentReturnsTable(
     this,
   );
+  late final $AttendanceRecordsTable attendanceRecords =
+      $AttendanceRecordsTable(this);
   late final $SyncQueueItemsTable syncQueueItems = $SyncQueueItemsTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
   late final $SyncConflictsTable syncConflicts = $SyncConflictsTable(this);
@@ -5092,6 +5664,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     equipmentItems,
     assignments,
     equipmentReturns,
+    attendanceRecords,
     syncQueueItems,
     syncCursors,
     syncConflicts,
@@ -5431,6 +6004,27 @@ final class $$WorkspacesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$AttendanceRecordsTable, List<AttendanceRecord>>
+  _attendanceRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.attendanceRecords,
+        aliasName: 'workspaces__id__attendance_records__workspace_id',
+      );
+
+  $$AttendanceRecordsTableProcessedTableManager get attendanceRecordsRefs {
+    final manager = $$AttendanceRecordsTableTableManager(
+      $_db,
+      $_db.attendanceRecords,
+    ).filter((f) => f.workspaceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _attendanceRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$WorkspacesTableFilterComposer
@@ -5593,6 +6187,31 @@ class $$WorkspacesTableFilterComposer
           }) => $$EquipmentReturnsTableFilterComposer(
             $db: $db,
             $table: $db.equipmentReturns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> attendanceRecordsRefs(
+    Expression<bool> Function($$AttendanceRecordsTableFilterComposer f) f,
+  ) {
+    final $$AttendanceRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.attendanceRecords,
+      getReferencedColumn: (t) => t.workspaceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AttendanceRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.attendanceRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5804,6 +6423,32 @@ class $$WorkspacesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> attendanceRecordsRefs<T extends Object>(
+    Expression<T> Function($$AttendanceRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$AttendanceRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.attendanceRecords,
+          getReferencedColumn: (t) => t.workspaceId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AttendanceRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.attendanceRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$WorkspacesTableTableManager
@@ -5825,6 +6470,7 @@ class $$WorkspacesTableTableManager
             bool equipmentItemsRefs,
             bool assignmentsRefs,
             bool equipmentReturnsRefs,
+            bool attendanceRecordsRefs,
           })
         > {
   $$WorkspacesTableTableManager(_$AppDatabase db, $WorkspacesTable table)
@@ -5893,6 +6539,7 @@ class $$WorkspacesTableTableManager
                 equipmentItemsRefs = false,
                 assignmentsRefs = false,
                 equipmentReturnsRefs = false,
+                attendanceRecordsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -5902,6 +6549,7 @@ class $$WorkspacesTableTableManager
                     if (equipmentItemsRefs) db.equipmentItems,
                     if (assignmentsRefs) db.assignments,
                     if (equipmentReturnsRefs) db.equipmentReturns,
+                    if (attendanceRecordsRefs) db.attendanceRecords,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -6011,6 +6659,27 @@ class $$WorkspacesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (attendanceRecordsRefs)
+                        await $_getPrefetchedData<
+                          Workspace,
+                          $WorkspacesTable,
+                          AttendanceRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkspacesTableReferences
+                              ._attendanceRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkspacesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).attendanceRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workspaceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6037,6 +6706,7 @@ typedef $$WorkspacesTableProcessedTableManager =
         bool equipmentItemsRefs,
         bool assignmentsRefs,
         bool equipmentReturnsRefs,
+        bool attendanceRecordsRefs,
       })
     >;
 typedef $$WorkoutsTableCreateCompanionBuilder =
@@ -6100,6 +6770,27 @@ final class $$WorkoutsTableReferences
     ).filter((f) => f.workoutId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_assignmentsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$AttendanceRecordsTable, List<AttendanceRecord>>
+  _attendanceRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.attendanceRecords,
+        aliasName: 'workouts__id__attendance_records__workout_id',
+      );
+
+  $$AttendanceRecordsTableProcessedTableManager get attendanceRecordsRefs {
+    final manager = $$AttendanceRecordsTableTableManager(
+      $_db,
+      $_db.attendanceRecords,
+    ).filter((f) => f.workoutId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _attendanceRecordsRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -6194,6 +6885,31 @@ class $$WorkoutsTableFilterComposer
           }) => $$AssignmentsTableFilterComposer(
             $db: $db,
             $table: $db.assignments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> attendanceRecordsRefs(
+    Expression<bool> Function($$AttendanceRecordsTableFilterComposer f) f,
+  ) {
+    final $$AttendanceRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.attendanceRecords,
+      getReferencedColumn: (t) => t.workoutId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AttendanceRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.attendanceRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6357,6 +7073,32 @@ class $$WorkoutsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> attendanceRecordsRefs<T extends Object>(
+    Expression<T> Function($$AttendanceRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$AttendanceRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.attendanceRecords,
+          getReferencedColumn: (t) => t.workoutId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AttendanceRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.attendanceRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$WorkoutsTableTableManager
@@ -6372,7 +7114,11 @@ class $$WorkoutsTableTableManager
           $$WorkoutsTableUpdateCompanionBuilder,
           (Workout, $$WorkoutsTableReferences),
           Workout,
-          PrefetchHooks Function({bool workspaceId, bool assignmentsRefs})
+          PrefetchHooks Function({
+            bool workspaceId,
+            bool assignmentsRefs,
+            bool attendanceRecordsRefs,
+          })
         > {
   $$WorkoutsTableTableManager(_$AppDatabase db, $WorkoutsTable table)
     : super(
@@ -6442,11 +7188,16 @@ class $$WorkoutsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({workspaceId = false, assignmentsRefs = false}) {
+              ({
+                workspaceId = false,
+                assignmentsRefs = false,
+                attendanceRecordsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (assignmentsRefs) db.assignments,
+                    if (attendanceRecordsRefs) db.attendanceRecords,
                   ],
                   addJoins:
                       <
@@ -6503,6 +7254,27 @@ class $$WorkoutsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (attendanceRecordsRefs)
+                        await $_getPrefetchedData<
+                          Workout,
+                          $WorkoutsTable,
+                          AttendanceRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkoutsTableReferences
+                              ._attendanceRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkoutsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).attendanceRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workoutId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6523,7 +7295,11 @@ typedef $$WorkoutsTableProcessedTableManager =
       $$WorkoutsTableUpdateCompanionBuilder,
       (Workout, $$WorkoutsTableReferences),
       Workout,
-      PrefetchHooks Function({bool workspaceId, bool assignmentsRefs})
+      PrefetchHooks Function({
+        bool workspaceId,
+        bool assignmentsRefs,
+        bool attendanceRecordsRefs,
+      })
     >;
 typedef $$TraineesTableCreateCompanionBuilder =
     TraineesCompanion Function({
@@ -6582,6 +7358,27 @@ final class $$TraineesTableReferences
     ).filter((f) => f.traineeId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_assignmentsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$AttendanceRecordsTable, List<AttendanceRecord>>
+  _attendanceRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.attendanceRecords,
+        aliasName: 'trainees__id__attendance_records__trainee_id',
+      );
+
+  $$AttendanceRecordsTableProcessedTableManager get attendanceRecordsRefs {
+    final manager = $$AttendanceRecordsTableTableManager(
+      $_db,
+      $_db.attendanceRecords,
+    ).filter((f) => f.traineeId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _attendanceRecordsRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -6666,6 +7463,31 @@ class $$TraineesTableFilterComposer
           }) => $$AssignmentsTableFilterComposer(
             $db: $db,
             $table: $db.assignments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> attendanceRecordsRefs(
+    Expression<bool> Function($$AttendanceRecordsTableFilterComposer f) f,
+  ) {
+    final $$AttendanceRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.attendanceRecords,
+      getReferencedColumn: (t) => t.traineeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AttendanceRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.attendanceRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6813,6 +7635,32 @@ class $$TraineesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> attendanceRecordsRefs<T extends Object>(
+    Expression<T> Function($$AttendanceRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$AttendanceRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.attendanceRecords,
+          getReferencedColumn: (t) => t.traineeId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AttendanceRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.attendanceRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$TraineesTableTableManager
@@ -6828,7 +7676,11 @@ class $$TraineesTableTableManager
           $$TraineesTableUpdateCompanionBuilder,
           (Trainee, $$TraineesTableReferences),
           Trainee,
-          PrefetchHooks Function({bool workspaceId, bool assignmentsRefs})
+          PrefetchHooks Function({
+            bool workspaceId,
+            bool assignmentsRefs,
+            bool attendanceRecordsRefs,
+          })
         > {
   $$TraineesTableTableManager(_$AppDatabase db, $TraineesTable table)
     : super(
@@ -6890,11 +7742,16 @@ class $$TraineesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({workspaceId = false, assignmentsRefs = false}) {
+              ({
+                workspaceId = false,
+                assignmentsRefs = false,
+                attendanceRecordsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (assignmentsRefs) db.assignments,
+                    if (attendanceRecordsRefs) db.attendanceRecords,
                   ],
                   addJoins:
                       <
@@ -6951,6 +7808,27 @@ class $$TraineesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (attendanceRecordsRefs)
+                        await $_getPrefetchedData<
+                          Trainee,
+                          $TraineesTable,
+                          AttendanceRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TraineesTableReferences
+                              ._attendanceRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TraineesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).attendanceRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.traineeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6971,7 +7849,11 @@ typedef $$TraineesTableProcessedTableManager =
       $$TraineesTableUpdateCompanionBuilder,
       (Trainee, $$TraineesTableReferences),
       Trainee,
-      PrefetchHooks Function({bool workspaceId, bool assignmentsRefs})
+      PrefetchHooks Function({
+        bool workspaceId,
+        bool assignmentsRefs,
+        bool attendanceRecordsRefs,
+      })
     >;
 typedef $$EquipmentItemsTableCreateCompanionBuilder =
     EquipmentItemsCompanion Function({
@@ -8716,6 +9598,596 @@ typedef $$EquipmentReturnsTableProcessedTableManager =
       EquipmentReturn,
       PrefetchHooks Function({bool workspaceId, bool assignmentId})
     >;
+typedef $$AttendanceRecordsTableCreateCompanionBuilder =
+    AttendanceRecordsCompanion Function({
+      required String id,
+      required String workspaceId,
+      required String workoutId,
+      required String traineeId,
+      Value<String> status,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> version,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$AttendanceRecordsTableUpdateCompanionBuilder =
+    AttendanceRecordsCompanion Function({
+      Value<String> id,
+      Value<String> workspaceId,
+      Value<String> workoutId,
+      Value<String> traineeId,
+      Value<String> status,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> version,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+final class $$AttendanceRecordsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $AttendanceRecordsTable,
+          AttendanceRecord
+        > {
+  $$AttendanceRecordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorkspacesTable _workspaceIdTable(_$AppDatabase db) => db.workspaces
+      .createAlias('attendance_records__workspace_id__workspaces__id');
+
+  $$WorkspacesTableProcessedTableManager get workspaceId {
+    final $_column = $_itemColumn<String>('workspace_id')!;
+
+    final manager = $$WorkspacesTableTableManager(
+      $_db,
+      $_db.workspaces,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workspaceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $WorkoutsTable _workoutIdTable(_$AppDatabase db) =>
+      db.workouts.createAlias('attendance_records__workout_id__workouts__id');
+
+  $$WorkoutsTableProcessedTableManager get workoutId {
+    final $_column = $_itemColumn<String>('workout_id')!;
+
+    final manager = $$WorkoutsTableTableManager(
+      $_db,
+      $_db.workouts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workoutIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TraineesTable _traineeIdTable(_$AppDatabase db) =>
+      db.trainees.createAlias('attendance_records__trainee_id__trainees__id');
+
+  $$TraineesTableProcessedTableManager get traineeId {
+    final $_column = $_itemColumn<String>('trainee_id')!;
+
+    final manager = $$TraineesTableTableManager(
+      $_db,
+      $_db.trainees,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_traineeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AttendanceRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $AttendanceRecordsTable> {
+  $$AttendanceRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorkspacesTableFilterComposer get workspaceId {
+    final $$WorkspacesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceId,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorkoutsTableFilterComposer get workoutId {
+    final $$WorkoutsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workoutId,
+      referencedTable: $db.workouts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkoutsTableFilterComposer(
+            $db: $db,
+            $table: $db.workouts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TraineesTableFilterComposer get traineeId {
+    final $$TraineesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.traineeId,
+      referencedTable: $db.trainees,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TraineesTableFilterComposer(
+            $db: $db,
+            $table: $db.trainees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AttendanceRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AttendanceRecordsTable> {
+  $$AttendanceRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorkspacesTableOrderingComposer get workspaceId {
+    final $$WorkspacesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceId,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableOrderingComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorkoutsTableOrderingComposer get workoutId {
+    final $$WorkoutsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workoutId,
+      referencedTable: $db.workouts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkoutsTableOrderingComposer(
+            $db: $db,
+            $table: $db.workouts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TraineesTableOrderingComposer get traineeId {
+    final $$TraineesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.traineeId,
+      referencedTable: $db.trainees,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TraineesTableOrderingComposer(
+            $db: $db,
+            $table: $db.trainees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AttendanceRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AttendanceRecordsTable> {
+  $$AttendanceRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $$WorkspacesTableAnnotationComposer get workspaceId {
+    final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceId,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorkoutsTableAnnotationComposer get workoutId {
+    final $$WorkoutsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workoutId,
+      referencedTable: $db.workouts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkoutsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.workouts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TraineesTableAnnotationComposer get traineeId {
+    final $$TraineesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.traineeId,
+      referencedTable: $db.trainees,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TraineesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.trainees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AttendanceRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AttendanceRecordsTable,
+          AttendanceRecord,
+          $$AttendanceRecordsTableFilterComposer,
+          $$AttendanceRecordsTableOrderingComposer,
+          $$AttendanceRecordsTableAnnotationComposer,
+          $$AttendanceRecordsTableCreateCompanionBuilder,
+          $$AttendanceRecordsTableUpdateCompanionBuilder,
+          (AttendanceRecord, $$AttendanceRecordsTableReferences),
+          AttendanceRecord,
+          PrefetchHooks Function({
+            bool workspaceId,
+            bool workoutId,
+            bool traineeId,
+          })
+        > {
+  $$AttendanceRecordsTableTableManager(
+    _$AppDatabase db,
+    $AttendanceRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AttendanceRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AttendanceRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AttendanceRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> workspaceId = const Value.absent(),
+                Value<String> workoutId = const Value.absent(),
+                Value<String> traineeId = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AttendanceRecordsCompanion(
+                id: id,
+                workspaceId: workspaceId,
+                workoutId: workoutId,
+                traineeId: traineeId,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String workspaceId,
+                required String workoutId,
+                required String traineeId,
+                Value<String> status = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> version = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AttendanceRecordsCompanion.insert(
+                id: id,
+                workspaceId: workspaceId,
+                workoutId: workoutId,
+                traineeId: traineeId,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AttendanceRecordsTable, AttendanceRecord>(table),
+                  $$AttendanceRecordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({workspaceId = false, workoutId = false, traineeId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (workspaceId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.workspaceId,
+                                    referencedTable:
+                                        $$AttendanceRecordsTableReferences
+                                            ._workspaceIdTable(db),
+                                    referencedColumn:
+                                        $$AttendanceRecordsTableReferences
+                                            ._workspaceIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (workoutId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.workoutId,
+                                    referencedTable:
+                                        $$AttendanceRecordsTableReferences
+                                            ._workoutIdTable(db),
+                                    referencedColumn:
+                                        $$AttendanceRecordsTableReferences
+                                            ._workoutIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (traineeId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.traineeId,
+                                    referencedTable:
+                                        $$AttendanceRecordsTableReferences
+                                            ._traineeIdTable(db),
+                                    referencedColumn:
+                                        $$AttendanceRecordsTableReferences
+                                            ._traineeIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AttendanceRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AttendanceRecordsTable,
+      AttendanceRecord,
+      $$AttendanceRecordsTableFilterComposer,
+      $$AttendanceRecordsTableOrderingComposer,
+      $$AttendanceRecordsTableAnnotationComposer,
+      $$AttendanceRecordsTableCreateCompanionBuilder,
+      $$AttendanceRecordsTableUpdateCompanionBuilder,
+      (AttendanceRecord, $$AttendanceRecordsTableReferences),
+      AttendanceRecord,
+      PrefetchHooks Function({bool workspaceId, bool workoutId, bool traineeId})
+    >;
 typedef $$SyncQueueItemsTableCreateCompanionBuilder =
     SyncQueueItemsCompanion Function({
       required String id,
@@ -9522,6 +10994,8 @@ class $AppDatabaseManager {
       $$AssignmentsTableTableManager(_db, _db.assignments);
   $$EquipmentReturnsTableTableManager get equipmentReturns =>
       $$EquipmentReturnsTableTableManager(_db, _db.equipmentReturns);
+  $$AttendanceRecordsTableTableManager get attendanceRecords =>
+      $$AttendanceRecordsTableTableManager(_db, _db.attendanceRecords);
   $$SyncQueueItemsTableTableManager get syncQueueItems =>
       $$SyncQueueItemsTableTableManager(_db, _db.syncQueueItems);
   $$SyncCursorsTableTableManager get syncCursors =>

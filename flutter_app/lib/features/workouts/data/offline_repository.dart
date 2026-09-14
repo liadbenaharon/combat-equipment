@@ -48,6 +48,35 @@ class OfflineRepository {
     return query.watch();
   }
 
+  Future<List<Workout>> getWorkouts(String workspaceId) {
+    final query = _database.select(_database.workouts)
+      ..where(
+        (row) => row.workspaceId.equals(workspaceId) & row.deletedAt.isNull(),
+      )
+      ..orderBy([(row) => OrderingTerm.desc(row.startsAt)]);
+    return query.get();
+  }
+
+  Future<List<Trainee>> getTrainees(String workspaceId) {
+    final query = _database.select(_database.trainees)
+      ..where(
+        (row) => row.workspaceId.equals(workspaceId) & row.deletedAt.isNull(),
+      );
+    return query.get();
+  }
+
+  Future<List<EquipmentItem>> getEquipment(String workspaceId) {
+    final query = _database.select(_database.equipmentItems)
+      ..where(
+        (row) => row.workspaceId.equals(workspaceId) & row.deletedAt.isNull(),
+      );
+    return query.get();
+  }
+
+  Future<List<AssignmentOverview>> getAssignments(String workoutId) {
+    return watchAssignments(workoutId).first;
+  }
+
   Stream<List<AssignmentOverview>> watchAssignments(String workoutId) {
     return _database
         .customSelect(
@@ -490,6 +519,147 @@ class OfflineRepository {
     });
   }
 
+  Future<void> replaceWorkoutAssignments({
+    required String workspaceId,
+    required String workoutId,
+    required List<AssignmentReplacement> replacements,
+  }) async {
+    final now = _clock().toUtc();
+    await _database.transaction(() async {
+      final existing = await (_database.select(_database.assignments)..where(
+            (row) =>
+                row.workoutId.equals(workoutId) & row.deletedAt.isNull(),
+          ))
+          .get();
+      for (final assignment in existing) {
+        final returns = await (_database.select(_database.equipmentReturns)
+              ..where(
+                (row) =>
+                    row.assignmentId.equals(assignment.id) &
+                    row.deletedAt.isNull(),
+              ))
+            .get();
+        for (final equipmentReturn in returns) {
+          await (_database.update(_database.equipmentReturns)..where(
+                (row) => row.id.equals(equipmentReturn.id),
+              ))
+              .write(
+                EquipmentReturnsCompanion(
+                  deletedAt: Value(now),
+                  updatedAt: Value(now),
+                  version: Value(equipmentReturn.version + 1),
+                ),
+              );
+          await _enqueue(
+            workspaceId: workspaceId,
+            entityTable: 'equipment_returns',
+            entityId: equipmentReturn.id,
+            operation: 'delete',
+            payload: {
+              'id': equipmentReturn.id,
+              'workspace_id': workspaceId,
+              'deleted_at': now.toIso8601String(),
+            },
+            baseVersion: equipmentReturn.version,
+            createdAt: now,
+          );
+        }
+        await (_database.update(_database.assignments)..where(
+              (row) => row.id.equals(assignment.id),
+            ))
+            .write(
+              AssignmentsCompanion(
+                deletedAt: Value(now),
+                updatedAt: Value(now),
+                version: Value(assignment.version + 1),
+              ),
+            );
+        await _enqueue(
+          workspaceId: workspaceId,
+          entityTable: 'assignments',
+          entityId: assignment.id,
+          operation: 'delete',
+          payload: {
+            'id': assignment.id,
+            'workspace_id': workspaceId,
+            'deleted_at': now.toIso8601String(),
+          },
+          baseVersion: assignment.version,
+          createdAt: now,
+        );
+      }
+
+      for (final replacement in replacements) {
+        final assignmentId = _idFactory();
+        final assignmentPayload = <String, Object?>{
+          'id': assignmentId,
+          'workspace_id': workspaceId,
+          'workout_id': workoutId,
+          'trainee_id': replacement.traineeId,
+          'equipment_id': replacement.equipmentId,
+          'quantity': replacement.quantity,
+          'created_at': now.toIso8601String(),
+          'updated_at': now.toIso8601String(),
+          'version': 0,
+          'deleted_at': null,
+        };
+        await _database.into(_database.assignments).insert(
+          AssignmentsCompanion.insert(
+            id: assignmentId,
+            workspaceId: workspaceId,
+            workoutId: workoutId,
+            traineeId: replacement.traineeId,
+            equipmentId: replacement.equipmentId,
+            quantity: replacement.quantity,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+        await _enqueue(
+          workspaceId: workspaceId,
+          entityTable: 'assignments',
+          entityId: assignmentId,
+          operation: 'upsert',
+          payload: assignmentPayload,
+          baseVersion: 0,
+          createdAt: now,
+        );
+        if (replacement.returnedQuantity > 0) {
+          final returnId = _idFactory();
+          final returnPayload = <String, Object?>{
+            'id': returnId,
+            'workspace_id': workspaceId,
+            'assignment_id': assignmentId,
+            'returned_quantity': replacement.returnedQuantity,
+            'created_at': now.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+            'version': 0,
+            'deleted_at': null,
+          };
+          await _database.into(_database.equipmentReturns).insert(
+            EquipmentReturnsCompanion.insert(
+              id: returnId,
+              workspaceId: workspaceId,
+              assignmentId: assignmentId,
+              returnedQuantity: replacement.returnedQuantity,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+          await _enqueue(
+            workspaceId: workspaceId,
+            entityTable: 'equipment_returns',
+            entityId: returnId,
+            operation: 'upsert',
+            payload: returnPayload,
+            baseVersion: 0,
+            createdAt: now,
+          );
+        }
+      }
+    });
+  }
+
   Future<void> deleteWorkout(String workoutId) async {
     final workout = await (_database.select(
       _database.workouts,
@@ -677,4 +847,18 @@ class AttendanceOverview {
   final String traineeId;
   final String traineeName;
   final String status;
+}
+
+class AssignmentReplacement {
+  const AssignmentReplacement({
+    required this.traineeId,
+    required this.equipmentId,
+    required this.quantity,
+    required this.returnedQuantity,
+  });
+
+  final String traineeId;
+  final String equipmentId;
+  final int quantity;
+  final int returnedQuantity;
 }
