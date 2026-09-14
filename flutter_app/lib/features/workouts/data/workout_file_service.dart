@@ -49,12 +49,16 @@ class WorkoutFileService {
     required String workspaceId,
     required Workout targetWorkout,
   }) async {
-    final file = await FilePicker.pickFile(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['csv'],
+      withData: true,
     );
-    if (file == null) return null;
-    final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
+    if (result == null) return null;
+    final text = utf8.decode(
+      await result.xFiles.single.readAsBytes(),
+      allowMalformed: false,
+    );
     final rows = _parseCsv(text.replaceFirst('\uFEFF', ''));
     final headerIndex = rows.indexWhere(
       (row) => row.length >= 4 && row[0].trim() == 'שם המתאמן',
