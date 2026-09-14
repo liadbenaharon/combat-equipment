@@ -1,0 +1,83 @@
+name: Flutter Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - flutter-offline-first
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/flutter-android.yml'
+  pull_request:
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/flutter-android.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: flutter_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install stable Flutter
+        working-directory: ${{ runner.temp }}
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git flutter
+          echo "${{ runner.temp }}/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve pinned dependencies
+        run: |
+          flutter config --no-analytics
+          flutter pub get
+
+      - name: Generate Drift database code
+        run: dart run build_runner build
+
+      - name: Preserve dependency lock and generated database code
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-generated-state
+          path: |
+            flutter_app/pubspec.lock
+            flutter_app/lib/**/*.g.dart
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Analyze Flutter code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
+
+      - name: Build debug APK
+        run: |
+          SUPABASE_URL="$(sed -n "s/.*url:'\([^']*\)'.*/\1/p" ../cloud-config.js)"
+          SUPABASE_PUBLISHABLE_KEY="$(sed -n "s/.*publishableKey:'\([^']*\)'.*/\1/p" ../cloud-config.js)"
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_PUBLISHABLE_KEY"
+          flutter build apk --debug \
+            --dart-define="SUPABASE_URL=$SUPABASE_URL" \
+            --dart-define="SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: combat-equipment-flutter-debug
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

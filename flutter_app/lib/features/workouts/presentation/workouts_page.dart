@@ -1,0 +1,334 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/database/app_database.dart';
+import '../../../core/session/session_bootstrapper.dart';
+import '../../../core/sync/sync_engine.dart';
+import '../data/offline_repository.dart';
+import '../data/workout_file_service.dart';
+import 'workout_detail_page.dart';
+
+class WorkoutsPage extends StatefulWidget {
+  const WorkoutsPage({
+    required this.session,
+    required this.database,
+    required this.repository,
+    required this.syncEngine,
+    required this.onSignOut,
+    super.key,
+  });
+
+  final LocalSession session;
+  final AppDatabase database;
+  final OfflineRepository repository;
+  final SyncEngine? syncEngine;
+  final Future<void> Function() onSignOut;
+
+  @override
+  State<WorkoutsPage> createState() => _WorkoutsPageState();
+}
+
+class _WorkoutsPageState extends State<WorkoutsPage> {
+  bool _syncing = false;
+  String? _notice;
+  late String _selectedWorkspaceId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedWorkspaceId = widget.session.workspaceId;
+    if (widget.syncEngine != null) _sync(silent: true);
+  }
+
+  Future<void> _sync({bool silent = false}) async {
+    if (_syncing || widget.syncEngine == null) return;
+    setState(() => _syncing = true);
+    try {
+      await widget.syncEngine!.syncWorkspace(_selectedWorkspaceId);
+      if (!silent && mounted) setState(() => _notice = 'הסנכרון הושלם');
+    } catch (_) {
+      if (!silent && mounted) {
+        setState(() => _notice = 'אין חיבור כרגע — השינויים נשמרו בטלפון');
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _createWorkout() async {
+    final controller = TextEditingController();
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('אימון חדש'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'שם האימון'),
+          onSubmitted: (value) => Navigator.pop(context, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('שמירה'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title == null || title.isEmpty) return;
+    await widget.repository.createWorkout(
+      workspaceId: _selectedWorkspaceId,
+      title: title,
+      startsAt: DateTime.now(),
+    );
+    await _sync(silent: true);
+  }
+
+  Future<Workout?> _chooseWorkout(String title) async {
+    final workouts = await widget.repository.getWorkouts(
+      _selectedWorkspaceId,
+    );
+    if (!mounted) return null;
+    if (workouts.isEmpty) {
+      setState(() => _notice = 'צריך ליצור אימון קודם');
+      return null;
+    }
+    return showDialog<Workout>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(title),
+        children: workouts
+            .map(
+              (workout) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, workout),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(workout.title),
+                  subtitle: Text(
+                    MaterialLocalizations.of(
+                      context,
+                    ).formatMediumDate(workout.startsAt.toLocal()),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Future<void> _exportWorkout() async {
+    final workout = await _chooseWorkout('מאיזה אימון לייצא?');
+    if (workout == null) return;
+    try {
+      final count = await WorkoutFileService(
+        widget.repository,
+      ).exportAndShare(workout);
+      if (mounted) setState(() => _notice = 'נוצר קובץ עם $count שיוכים');
+    } catch (error) {
+      if (mounted) setState(() => _notice = 'לא ניתן לייצא: $error');
+    }
+  }
+
+  Future<void> _importWorkout() async {
+    final workout = await _chooseWorkout('לאיזה אימון לייבא?');
+    if (workout == null || !mounted) return;
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ייבוא רשימה'),
+        content: Text(
+          'הרשימה בקובץ תחליף את כל השיוכים הקיימים באימון "${workout.title}".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('בחירת קובץ'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true) return;
+    try {
+      final count = await WorkoutFileService(widget.repository).pickAndImport(
+        workspaceId: _selectedWorkspaceId,
+        targetWorkout: workout,
+      );
+      if (count == null) return;
+      await _sync(silent: true);
+      if (mounted) setState(() => _notice = 'יובאו $count שיוכים בהצלחה');
+    } catch (error) {
+      if (mounted) setState(() => _notice = 'הייבוא נכשל: $error');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Combat Equipment'),
+        actions: [
+          IconButton(
+            tooltip: 'סנכרון',
+            onPressed: _syncing ? null : _sync,
+            icon: _syncing
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync_rounded),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'export') _exportWorkout();
+              if (value == 'import') _importWorkout();
+              if (value == 'signout') widget.onSignOut();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'export',
+                child: Text('ייצוא אימון לקובץ'),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: Text('ייבוא רשימה מקובץ'),
+              ),
+              PopupMenuItem(value: 'signout', child: Text('יציאה מהחשבון')),
+            ],
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createWorkout,
+        icon: const Icon(Icons.add),
+        label: const Text('אימון חדש'),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Text(
+                widget.session.role == 'admin'
+                    ? 'אדמין · בחירת מאמן'
+                    : 'מאמן · ${widget.session.displayName}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (widget.session.role == 'admin')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: StreamBuilder<List<Workspace>>(
+                  stream: widget.repository.watchWorkspaces(
+                    userId: widget.session.userId,
+                    isAdmin: true,
+                  ),
+                  builder: (context, snapshot) {
+                    final workspaces = snapshot.data ?? const [];
+                    final selectedExists = workspaces.any(
+                      (item) => item.id == _selectedWorkspaceId,
+                    );
+                    return DropdownButtonFormField<String>(
+                      initialValue: selectedExists
+                          ? _selectedWorkspaceId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'חשבון מאמן',
+                        prefixIcon: Icon(Icons.manage_accounts_outlined),
+                      ),
+                      items: workspaces
+                          .map(
+                            (workspace) => DropdownMenuItem(
+                              value: workspace.id,
+                              child: Text(workspace.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) async {
+                        if (value == null || value == _selectedWorkspaceId) {
+                          return;
+                        }
+                        setState(() {
+                          _selectedWorkspaceId = value;
+                          _notice = null;
+                        });
+                        await _sync(silent: true);
+                      },
+                    );
+                  },
+                ),
+              ),
+            if (_notice != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(_notice!),
+              ),
+            Expanded(
+              child: StreamBuilder<List<Workout>>(
+                stream: widget.repository.watchWorkouts(
+                  _selectedWorkspaceId,
+                ),
+                builder: (context, snapshot) {
+                  final workouts = snapshot.data ?? const [];
+                  if (workouts.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text(
+                          'עדיין אין אימונים. אפשר ליצור אימון גם בלי אינטרנט.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    itemCount: workouts.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final workout = workouts[index];
+                      return Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.fitness_center_rounded),
+                          title: Text(workout.title),
+                          subtitle: Text(
+                            MaterialLocalizations.of(
+                              context,
+                            ).formatMediumDate(workout.startsAt.toLocal()),
+                          ),
+                          trailing: const Icon(Icons.chevron_left),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => WorkoutDetailPage(
+                                  workout: workout,
+                                  workspaceId: _selectedWorkspaceId,
+                                  repository: widget.repository,
+                                ),
+                              ),
+                            );
+                            await _sync(silent: true);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
