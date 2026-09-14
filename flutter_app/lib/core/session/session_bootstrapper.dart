@@ -71,14 +71,14 @@ class SessionBootstrapper {
 
     if (role == 'admin' && _client != null) {
       try {
-        final rows = await _client!
+        final rows = await _client
             .from('workspaces')
             .select(
               'id,owner_user_id,name,created_at,updated_at,version,deleted_at',
             );
         await _database.transaction(() async {
           for (final value in rows) {
-            final row = value as Map<String, dynamic>;
+            final row = value;
             await _database.into(_database.workspaces).insertOnConflictUpdate(
               WorkspacesCompanion.insert(
                 id: row['id'] as String,
