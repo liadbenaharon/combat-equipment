@@ -112,6 +112,23 @@ class DatabaseRemoteChangeApplier implements RemoteChangeApplier {
               ),
             );
         return;
+      case 'attendance_records':
+        await _database
+            .into(_database.attendanceRecords)
+            .insertOnConflictUpdate(
+              AttendanceRecordsCompanion.insert(
+                id: change.entityId,
+                workspaceId: change.workspaceId,
+                workoutId: payload['workout_id']! as String,
+                traineeId: payload['trainee_id']! as String,
+                status: Value(payload['status'] as String? ?? 'unknown'),
+                createdAt: _date(payload['created_at']),
+                updatedAt: _date(payload['updated_at']),
+                version: Value(change.version),
+                deletedAt: Value(deletedAt),
+              ),
+            );
+        return;
       default:
         throw UnsupportedError('Unknown sync table: ${change.entityTable}');
     }

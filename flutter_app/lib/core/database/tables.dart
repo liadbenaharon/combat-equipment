@@ -99,6 +99,21 @@ class EquipmentReturns extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class AttendanceRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text().references(Workspaces, #id)();
+  TextColumn get workoutId => text().references(Workouts, #id)();
+  TextColumn get traineeId => text().references(Trainees, #id)();
+  TextColumn get status => text().withDefault(const Constant('unknown'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  IntColumn get version => integer().withDefault(const Constant(0))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 class SyncQueueItems extends Table {
   @override
   String get tableName => 'sync_queue';

@@ -18,7 +18,7 @@ class WorkoutDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(workout.title),
@@ -27,6 +27,7 @@ class WorkoutDetailPage extends StatelessWidget {
               Tab(text: 'ציוד', icon: Icon(Icons.inventory_2_outlined)),
               Tab(text: 'שיוכים', icon: Icon(Icons.people_outline)),
               Tab(text: 'החזרות', icon: Icon(Icons.assignment_return_outlined)),
+              Tab(text: 'נוכחות', icon: Icon(Icons.fact_check_outlined)),
             ],
           ),
         ),
@@ -43,6 +44,11 @@ class WorkoutDetailPage extends StatelessWidget {
               repository: repository,
             ),
             _ReturnsTab(
+              workoutId: workout.id,
+              repository: repository,
+            ),
+            _AttendanceTab(
+              workspaceId: workspaceId,
               workoutId: workout.id,
               repository: repository,
             ),
@@ -418,6 +424,62 @@ class _ReturnsTab extends StatelessWidget {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _AttendanceTab extends StatelessWidget {
+  const _AttendanceTab({
+    required this.workspaceId,
+    required this.workoutId,
+    required this.repository,
+  });
+
+  final String workspaceId;
+  final String workoutId;
+  final OfflineRepository repository;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<AttendanceOverview>>(
+      stream: repository.watchAttendance(
+        workspaceId: workspaceId,
+        workoutId: workoutId,
+      ),
+      builder: (context, snapshot) {
+        final people = snapshot.data ?? const [];
+        if (people.isEmpty) {
+          return const _EmptyState(
+            text: 'יש להוסיף מתאמנים במסך השיוכים',
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: people.length,
+          itemBuilder: (context, index) {
+            final person = people[index];
+            return Card(
+              child: ListTile(
+                title: Text(person.traineeName),
+                subtitle: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'unknown', label: Text('לא ידוע')),
+                    ButtonSegment(value: 'attending', label: Text('מגיע')),
+                    ButtonSegment(value: 'absent', label: Text('לא מגיע')),
+                  ],
+                  selected: {person.status},
+                  onSelectionChanged: (selection) => repository.setAttendance(
+                    workspaceId: workspaceId,
+                    workoutId: workoutId,
+                    traineeId: person.traineeId,
+                    status: selection.first,
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
