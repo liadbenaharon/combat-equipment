@@ -4,6 +4,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/session/session_bootstrapper.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../data/offline_repository.dart';
+import 'workout_detail_page.dart';
 
 class WorkoutsPage extends StatefulWidget {
   const WorkoutsPage({
@@ -164,6 +165,16 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                             MaterialLocalizations.of(
                               context,
                             ).formatMediumDate(workout.startsAt.toLocal()),
+                          ),
+                          trailing: const Icon(Icons.chevron_left),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => WorkoutDetailPage(
+                                workout: workout,
+                                workspaceId: widget.session.workspaceId,
+                                repository: widget.repository,
+                              ),
+                            ),
                           ),
                         ),
                       );

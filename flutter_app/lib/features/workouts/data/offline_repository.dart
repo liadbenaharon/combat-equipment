@@ -30,6 +30,172 @@ class OfflineRepository {
     return query.watch();
   }
 
+  Stream<List<Trainee>> watchTrainees(String workspaceId) {
+    final query = _database.select(_database.trainees)
+      ..where(
+        (row) => row.workspaceId.equals(workspaceId) & row.deletedAt.isNull(),
+      )
+      ..orderBy([(row) => OrderingTerm.asc(row.name)]);
+    return query.watch();
+  }
+
+  Stream<List<EquipmentItem>> watchEquipment(String workspaceId) {
+    final query = _database.select(_database.equipmentItems)
+      ..where(
+        (row) => row.workspaceId.equals(workspaceId) & row.deletedAt.isNull(),
+      )
+      ..orderBy([(row) => OrderingTerm.asc(row.name)]);
+    return query.watch();
+  }
+
+  Stream<List<AssignmentOverview>> watchAssignments(String workoutId) {
+    return _database
+        .customSelect(
+          '''
+          SELECT a.id,
+                 a.equipment_id,
+                 a.trainee_id,
+                 a.quantity,
+                 t.name AS trainee_name,
+                 e.name AS equipment_name,
+                 COALESCE(r.returned_quantity, 0) AS returned_quantity
+          FROM assignments a
+          JOIN trainees t ON t.id = a.trainee_id
+          JOIN equipment_items e ON e.id = a.equipment_id
+          LEFT JOIN equipment_returns r
+            ON r.assignment_id = a.id AND r.deleted_at IS NULL
+          WHERE a.workout_id = ?
+            AND a.deleted_at IS NULL
+            AND t.deleted_at IS NULL
+            AND e.deleted_at IS NULL
+          ORDER BY t.name, e.name
+          ''',
+          variables: [Variable.withString(workoutId)],
+          readsFrom: {
+            _database.assignments,
+            _database.trainees,
+            _database.equipmentItems,
+            _database.equipmentReturns,
+          },
+        )
+        .watch()
+        .map(
+          (rows) => rows
+              .map(
+                (row) => AssignmentOverview(
+                  id: row.read<String>('id'),
+                  equipmentId: row.read<String>('equipment_id'),
+                  traineeId: row.read<String>('trainee_id'),
+                  traineeName: row.read<String>('trainee_name'),
+                  equipmentName: row.read<String>('equipment_name'),
+                  quantity: row.read<int>('quantity'),
+                  returnedQuantity: row.read<int>('returned_quantity'),
+                ),
+              )
+              .toList(),
+        );
+  }
+
+  Future<int> assignedQuantity({
+    required String workoutId,
+    required String equipmentId,
+  }) async {
+    final rows = await (_database.select(_database.assignments)..where(
+          (row) =>
+              row.workoutId.equals(workoutId) &
+              row.equipmentId.equals(equipmentId) &
+              row.deletedAt.isNull(),
+        ))
+        .get();
+    return rows.fold(0, (sum, row) => sum + row.quantity);
+  }
+
+  Future<String> addTrainee({
+    required String workspaceId,
+    required String name,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) throw ArgumentError('name cannot be empty');
+    final id = _idFactory();
+    final now = _clock().toUtc();
+    final payload = <String, Object?>{
+      'id': id,
+      'workspace_id': workspaceId,
+      'name': normalizedName,
+      'created_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+      'version': 0,
+      'deleted_at': null,
+    };
+    await _database.transaction(() async {
+      await _database.into(_database.trainees).insert(
+        TraineesCompanion.insert(
+          id: id,
+          workspaceId: workspaceId,
+          name: normalizedName,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await _enqueue(
+        workspaceId: workspaceId,
+        entityTable: 'trainees',
+        entityId: id,
+        operation: 'upsert',
+        payload: payload,
+        baseVersion: 0,
+        createdAt: now,
+      );
+    });
+    return id;
+  }
+
+  Future<String> addEquipment({
+    required String workspaceId,
+    required String name,
+    required int totalQuantity,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) throw ArgumentError('name cannot be empty');
+    if (totalQuantity <= 0) {
+      throw ArgumentError.value(totalQuantity, 'totalQuantity');
+    }
+    final id = _idFactory();
+    final now = _clock().toUtc();
+    final payload = <String, Object?>{
+      'id': id,
+      'workspace_id': workspaceId,
+      'name': normalizedName,
+      'total_quantity': totalQuantity,
+      'created_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+      'version': 0,
+      'deleted_at': null,
+    };
+    await _database.transaction(() async {
+      await _database.into(_database.equipmentItems).insert(
+        EquipmentItemsCompanion.insert(
+          id: id,
+          workspaceId: workspaceId,
+          name: normalizedName,
+          totalQuantity: totalQuantity,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await _enqueue(
+        workspaceId: workspaceId,
+        entityTable: 'equipment_items',
+        entityId: id,
+        operation: 'upsert',
+        payload: payload,
+        baseVersion: 0,
+        createdAt: now,
+      );
+    });
+    return id;
+  }
+
   Future<String> createWorkspace({
     required String ownerUserId,
     required String name,
@@ -171,6 +337,61 @@ class OfflineRepository {
     return id;
   }
 
+  Future<void> setReturnedQuantity({
+    required String assignmentId,
+    required int returnedQuantity,
+  }) async {
+    final assignment = await (_database.select(_database.assignments)..where(
+          (row) => row.id.equals(assignmentId) & row.deletedAt.isNull(),
+        ))
+        .getSingle();
+    if (returnedQuantity < 0 || returnedQuantity > assignment.quantity) {
+      throw ArgumentError.value(returnedQuantity, 'returnedQuantity');
+    }
+    final existing = await (_database.select(_database.equipmentReturns)
+          ..where(
+            (row) => row.assignmentId.equals(assignmentId) & row.deletedAt.isNull(),
+          ))
+        .getSingleOrNull();
+    final id = existing?.id ?? _idFactory();
+    final now = _clock().toUtc();
+    final createdAt = existing?.createdAt ?? now;
+    final baseVersion = existing?.version ?? 0;
+    final nextVersion = existing == null ? 0 : baseVersion + 1;
+    final payload = <String, Object?>{
+      'id': id,
+      'workspace_id': assignment.workspaceId,
+      'assignment_id': assignmentId,
+      'returned_quantity': returnedQuantity,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+      'version': nextVersion,
+      'deleted_at': null,
+    };
+    await _database.transaction(() async {
+      await _database.into(_database.equipmentReturns).insertOnConflictUpdate(
+        EquipmentReturnsCompanion.insert(
+          id: id,
+          workspaceId: assignment.workspaceId,
+          assignmentId: assignmentId,
+          returnedQuantity: returnedQuantity,
+          createdAt: createdAt,
+          updatedAt: now,
+          version: Value(nextVersion),
+        ),
+      );
+      await _enqueue(
+        workspaceId: assignment.workspaceId,
+        entityTable: 'equipment_returns',
+        entityId: id,
+        operation: 'upsert',
+        payload: payload,
+        baseVersion: baseVersion,
+        createdAt: now,
+      );
+    });
+  }
+
   Future<void> deleteWorkout(String workoutId) async {
     final workout = await (_database.select(
       _database.workouts,
@@ -186,6 +407,39 @@ class OfflineRepository {
               .get();
 
       for (final assignment in childAssignments) {
+        final childReturns =
+            await (_database.select(_database.equipmentReturns)..where(
+                  (row) =>
+                      row.assignmentId.equals(assignment.id) &
+                      row.deletedAt.isNull(),
+                ))
+                .get();
+        for (final equipmentReturn in childReturns) {
+          final returnVersion = equipmentReturn.version + 1;
+          await (_database.update(_database.equipmentReturns)..where(
+                (row) => row.id.equals(equipmentReturn.id),
+              ))
+              .write(
+                EquipmentReturnsCompanion(
+                  deletedAt: Value(now),
+                  updatedAt: Value(now),
+                  version: Value(returnVersion),
+                ),
+              );
+          await _enqueue(
+            workspaceId: equipmentReturn.workspaceId,
+            entityTable: 'equipment_returns',
+            entityId: equipmentReturn.id,
+            operation: 'delete',
+            payload: {
+              'id': equipmentReturn.id,
+              'workspace_id': equipmentReturn.workspaceId,
+              'deleted_at': now.toIso8601String(),
+            },
+            baseVersion: equipmentReturn.version,
+            createdAt: now,
+          );
+        }
         final nextVersion = assignment.version + 1;
         await (_database.update(
           _database.assignments,
@@ -261,4 +515,24 @@ class OfflineRepository {
           ),
         );
   }
+}
+
+class AssignmentOverview {
+  const AssignmentOverview({
+    required this.id,
+    required this.equipmentId,
+    required this.traineeId,
+    required this.traineeName,
+    required this.equipmentName,
+    required this.quantity,
+    required this.returnedQuantity,
+  });
+
+  final String id;
+  final String equipmentId;
+  final String traineeId;
+  final String traineeName;
+  final String equipmentName;
+  final int quantity;
+  final int returnedQuantity;
 }

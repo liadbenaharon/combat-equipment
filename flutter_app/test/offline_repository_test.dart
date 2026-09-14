@@ -68,4 +68,89 @@ void main() {
     expect(workout.deletedAt?.toUtc(), now);
     expect(deleteMutation.baseVersion, 0);
   });
+
+  test('assignment and partial return are stored offline', () async {
+    final workspaceId = await repository.createWorkspace(
+      ownerUserId: 'coach-1',
+      name: 'Coach one',
+    );
+    final workoutId = await repository.createWorkout(
+      workspaceId: workspaceId,
+      title: 'Training',
+      startsAt: now,
+    );
+    final traineeId = await repository.addTrainee(
+      workspaceId: workspaceId,
+      name: 'Trainee',
+    );
+    final equipmentId = await repository.addEquipment(
+      workspaceId: workspaceId,
+      name: 'Stretcher',
+      totalQuantity: 5,
+    );
+    final assignmentId = await repository.saveAssignment(
+      workspaceId: workspaceId,
+      workoutId: workoutId,
+      traineeId: traineeId,
+      equipmentId: equipmentId,
+      quantity: 3,
+    );
+
+    await repository.setReturnedQuantity(
+      assignmentId: assignmentId,
+      returnedQuantity: 2,
+    );
+
+    final rows = await repository.watchAssignments(workoutId).first;
+    expect(rows, hasLength(1));
+    expect(rows.single.quantity, 3);
+    expect(rows.single.returnedQuantity, 2);
+    expect(await repository.assignedQuantity(
+      workoutId: workoutId,
+      equipmentId: equipmentId,
+    ), 3);
+  });
+
+  test('deleting a workout tombstones its assignments and returns', () async {
+    final workspaceId = await repository.createWorkspace(
+      ownerUserId: 'coach-1',
+      name: 'Coach one',
+    );
+    final workoutId = await repository.createWorkout(
+      workspaceId: workspaceId,
+      title: 'Training',
+      startsAt: now,
+    );
+    final traineeId = await repository.addTrainee(
+      workspaceId: workspaceId,
+      name: 'Trainee',
+    );
+    final equipmentId = await repository.addEquipment(
+      workspaceId: workspaceId,
+      name: 'Jerrycan',
+      totalQuantity: 4,
+    );
+    final assignmentId = await repository.saveAssignment(
+      workspaceId: workspaceId,
+      workoutId: workoutId,
+      traineeId: traineeId,
+      equipmentId: equipmentId,
+      quantity: 1,
+    );
+    await repository.setReturnedQuantity(
+      assignmentId: assignmentId,
+      returnedQuantity: 1,
+    );
+
+    await repository.deleteWorkout(workoutId);
+
+    final assignment = await (database.select(database.assignments)..where(
+          (row) => row.id.equals(assignmentId),
+        ))
+        .getSingle();
+    final equipmentReturn =
+        await database.select(database.equipmentReturns).getSingle();
+    expect(assignment.deletedAt, isNotNull);
+    expect(equipmentReturn.deletedAt, isNotNull);
+  });
 }
