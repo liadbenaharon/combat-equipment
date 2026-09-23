@@ -35,7 +35,7 @@
     button=document.createElement('button');button.id='appUpdate';button.className='app-update';button.textContent='יש עדכון חדש — לחצו לעדכון';button.onclick=()=>registration.waiting?.postMessage({type:'SKIP_WAITING'});document.body.appendChild(button);
   }
   function registerWorker(){
-    if(!('serviceWorker' in navigator))return;
+    if(!('serviceWorker' in navigator)||window.CombatAndroid)return;
     let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload()});
     navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(registration=>{
       registration.update().catch(()=>{});
