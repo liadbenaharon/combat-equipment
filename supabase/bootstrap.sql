@@ -75,7 +75,8 @@ begin
   on conflict (id) do update set
     email = excluded.email,
     display_name = excluded.display_name,
-    role = case when excluded.email = 'liadpro12345@gmail.com' then 'admin' else 'coach' end,
+    -- Keep roles assigned manually; this trigger also fires on every login metadata update.
+    role = case when excluded.email = 'liadpro12345@gmail.com' then 'admin' else public.profiles.role end,
     updated_at = now();
 
   insert into public.coach_states (owner_id, data, updated_by)
