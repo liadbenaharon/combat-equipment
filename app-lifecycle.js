@@ -28,7 +28,7 @@
       try{const payload=JSON.parse(await file.text());CombatData.validateBackup(payload);if(!confirm('השחזור יחליף נתונים קיימים שנמצאים בגיבוי. להמשיך?'))return;CombatData.importBackup(payload);announce('הגיבוי שוחזר. האפליקציה נטענת מחדש.');setTimeout(()=>location.reload(),500)}
       catch(error){announce(error?.message||'לא ניתן לשחזר את הגיבוי','error')}finally{input.value=''}
     };
-    document.getElementById('clearDeviceData').onclick=()=>{if(!confirm('למחוק את כל הציוד, השיוכים, הנוכחות, ההיסטוריה ואנשי הקשר מהמכשיר הזה?\n\nמומלץ להוריד גיבוי לפני המחיקה.'))return;if(!confirm('זו מחיקה מלאה שלא ניתן לבטל ללא קובץ גיבוי. למחוק עכשיו?'))return;CombatData.clearAll();location.reload()};
+    document.getElementById('clearDeviceData').onclick=async()=>{const cloud=window.CombatCloud?.isSignedIn?.()?window.CombatCloud:null;if(cloud){if(!confirm('אתם מחוברים לחשבון.\n\nהנתונים יימחקו מהמכשיר הזה בלבד ויישארו שמורים בענן, ותתבצע יציאה מהחשבון. להמשיך?'))return;if(!await cloud.detachDevice())return}else{if(!confirm('למחוק את כל הציוד, השיוכים, הנוכחות, ההיסטוריה ואנשי הקשר מהמכשיר הזה?\n\nמומלץ להוריד גיבוי לפני המחיקה.'))return;if(!confirm('זו מחיקה מלאה שלא ניתן לבטל ללא קובץ גיבוי. למחוק עכשיו?'))return}CombatData.clearAll();location.reload()};
   }
   function addUpdateButton(registration){
     let button=document.getElementById('appUpdate');if(button)return;
