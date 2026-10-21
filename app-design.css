@@ -114,3 +114,13 @@ body{
   .summaryBar .stat strong{font-size:24px!important}
 }
 @media(prefers-reduced-motion:reduce){.btn.primary:after{animation:none;display:none}.unit,.btn,.tab{transition:none}}
+
+/* v2.4.17: account and sync live in a compact icon instead of a full-width button. */
+.headline{flex-wrap:nowrap!important;gap:8px}.headline>div:first-child{flex:1;min-width:0}
+.headline .badge{order:3}
+.cloud-account{order:2;position:relative;flex:0 0 auto;width:46px!important;height:46px;min-height:46px!important;padding:0!important;font-size:0!important;color:transparent!important;border-radius:15px!important;border:1px solid var(--line-strong)!important;background:var(--glass)!important;box-shadow:inset 0 1px rgba(255,255,255,.05)}
+.cloud-account:before{content:"";display:block;width:22px;height:22px;margin:auto;background:#d6ded8;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1'/%3E%3C/svg%3E") center/contain no-repeat}
+.cloud-account:after{content:"";position:absolute;top:6px;left:6px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px #0b100d,0 0 8px var(--accent)}
+.cloud-account[data-online="true"]:after{background:var(--ok);box-shadow:0 0 0 2px #0b100d,0 0 8px var(--ok)}
+.cloud-account:active{transform:scale(.94)}
+@media(max-width:430px){.headline .app-version-fixed{display:none!important}}
