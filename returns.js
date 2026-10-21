@@ -4,22 +4,28 @@
   const norm=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').trim().replace(/\s+/g,' ').toLocaleLowerCase('he');
   let returnMode=false,view='people',missingOnly=true,selectedWorkout='current';
   const historyItems=()=>{try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}};
-  const workoutOptions=()=>[{key:'current',label:'האימון הנוכחי',equipment:Array.isArray(state?.equipment)?state.equipment:[],historyIndex:-1}].concat(historyItems().map((h,i)=>({key:`history:${h.id||i}`,label:h.date||`אימון ${i+1}`,equipment:Array.isArray(h.equipment)?h.equipment:[],historyIndex:i,id:h.id})));
+  // Read-only views for rendering: reuse the parsed value while the stored text is unchanged. Never mutate them; writers use the fresh readers.
+  const viewCache=new Map();
+  function storedView(key,fallback,shape=x=>x){const raw=localStorage.getItem(key);const hit=viewCache.get(key);if(hit&&hit.raw===raw)return hit.value;let value=fallback;try{if(raw!==null)value=shape(JSON.parse(raw))}catch{}viewCache.set(key,{raw,value});return value}
+  const historyView=()=>{const h=storedView(HISTORY_KEY,[]);return Array.isArray(h)?h:[]};
+  const workoutOptions=()=>[{key:'current',label:'האימון הנוכחי',equipment:Array.isArray(state?.equipment)?state.equipment:[],historyIndex:-1}].concat(historyView().map((h,i)=>({key:`history:${h.id||i}`,label:h.date||`אימון ${i+1}`,equipment:Array.isArray(h.equipment)?h.equipment:[],historyIndex:i,id:h.id})));
   function selectedInfo(){const opts=workoutOptions();if(!opts.some(x=>x.key===selectedWorkout))selectedWorkout='current';return opts.find(x=>x.key===selectedWorkout)||opts[0]}
   const selectedEquipment=()=>selectedInfo()?.equipment||[];
-  function readAll(){try{const raw=JSON.parse(localStorage.getItem(RETURN_KEY)||'{}');if(!raw||typeof raw!=='object'||Array.isArray(raw))return {};const vals=Object.values(raw);if(vals.length&&vals.every(v=>typeof v==='boolean'))return {current:raw};return raw}catch{return {}}}
+  function normalizeReturns(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))return {};const vals=Object.values(raw);if(vals.length&&vals.every(v=>typeof v==='boolean'))return {current:raw};return raw}
+  function readAll(){try{return normalizeReturns(JSON.parse(localStorage.getItem(RETURN_KEY)||'{}'))}catch{return {}}}
+  const readAllView=()=>storedView(RETURN_KEY,{},normalizeReturns);
   const writeAll=d=>localStorage.setItem(RETURN_KEY,JSON.stringify(d));
   const read=()=>readAll()[selectedWorkout]||{};
   function workoutIdForKey(key){const option=workoutOptions().find(x=>x.key===key);return option?(option.id??option.historyIndex):null}
   function write(d){const all=readAll();all[selectedWorkout]=d;writeAll(all);if(selectedWorkout!=='current')reconcileCarriedWorkout(workoutIdForKey(selectedWorkout))}
   const slotKey=(eq,i)=>`${eq.id}:${i}`;
-  const isBack=(eq,i)=>!!read()[slotKey(eq,i)];
+  const isBack=(eq,i)=>!!readAllView()[selectedWorkout]?.[slotKey(eq,i)];
   function setSlots(eq,slots,value){const d=read();slots.forEach(i=>d[slotKey(eq,i)]=!!value);write(d)}
   const allSlots=eq=>Array.from({length:Number(eq.qty||0)},(_,i)=>i);
   const total=()=>selectedEquipment().reduce((n,e)=>n+activeSlots(e).length,0);
   function returnedEq(eq){return activeSlots(eq).filter(i=>isBack(eq,i)).length}
   const returned=()=>selectedEquipment().reduce((n,e)=>n+returnedEq(e),0);
-  function attendance(){try{const all=JSON.parse(localStorage.getItem(ATTENDANCE_KEY)||'{}');if(selectedWorkout==='current')return all.current||{absent:[]};const info=selectedInfo();return all[selectedWorkout]||all[`history-${info.historyIndex}`]||{absent:[]}}catch{return {absent:[]}}}
+  function attendance(){try{const all=storedView(ATTENDANCE_KEY,{})||{};if(selectedWorkout==='current')return all.current||{absent:[]};const info=selectedInfo();return all[selectedWorkout]||all[`history-${info.historyIndex}`]||{absent:[]}}catch{return {absent:[]}}}
   const absent=name=>(attendance().absent||[]).some(x=>norm(x)===norm(name));
   function allocation(eq){const inferred=(eq.assignments||[]).reduce((sum,a)=>sum+Math.max(0,Number(a.qty||0)),0),highest=(eq.assignments||[]).flatMap(a=>Array.isArray(a.units)?a.units:[]).reduce((max,i)=>Math.max(max,Number(i)+1),0),total=Math.max(0,Number(eq.qty||0),inferred,highest),used=new Set(),rows=[];(eq.assignments||[]).forEach(a=>{let slots=[];if(Array.isArray(a.units)&&a.units.length)slots=a.units.map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<total&&!used.has(i));else{const wanted=Math.max(0,Number(a.qty||0));for(let i=0;i<total&&slots.length<wanted;i++)if(!used.has(i))slots.push(i)}slots.forEach(i=>used.add(i));if(slots.length)rows.push({name:a.name,qty:slots.length,slots})});const remaining=Array.from({length:total},(_,i)=>i).filter(i=>!used.has(i));if(remaining.length)rows.push({name:'ללא שיוך',qty:remaining.length,slots:remaining,unassigned:true});return rows}
   function peopleGroups(){const map=new Map();selectedEquipment().forEach(eq=>{const active=new Set(activeSlots(eq));allocation(eq).forEach(a=>{const slots=a.slots.filter(i=>active.has(i));if(!slots.length)return;const k=a.unassigned?'__unassigned__':norm(a.name);if(!map.has(k))map.set(k,{name:a.name,unassigned:a.unassigned,items:[]});map.get(k).items.push({eq,slots,qty:slots.length})})});return [...map.values()]}
