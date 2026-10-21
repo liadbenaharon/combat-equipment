@@ -23,6 +23,9 @@ function makeEnv({remote,local,dirty,workspace,online=true,confirmAns=true,rpc=t
   return {ls,db,log,els,localStorage,setNet:v=>net=v};
 }
 const plain=x=>JSON.parse(JSON.stringify(x));
+// Same fingerprint as cloud-sync.js, over the snapshot of the app keys the harness knows.
+function fingerprint(text){let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+':'+text.length}
+function syncedRecord(owner,revision,local){const d={};for(const k of ['combatEquipmentStateV1','combatEquipmentHistoryV1','combatEquipmentReturnsV1'])if(local[k]!==undefined)d[k]=JSON.parse(local[k]);return JSON.stringify({owner,revision,hash:fingerprint(JSON.stringify(d))})}
 const wait=()=>new Promise(r=>setTimeout(r,50));
 const S='combatEquipmentStateV1',D='combatCloudDirtyV1';
 test('unsynced local changes are pushed, not overwritten by older cloud data',async()=>{
@@ -34,7 +37,8 @@ test('a real two-device conflict asks before choosing a side',async()=>{
   assert.ok(e.log.includes('confirm'));assert.equal(e.ls.get(S),'{"v":"other"}');assert.equal(e.ls.has(D),false);
 });
 test('clean device loads the cloud copy',async()=>{
-  const e=makeEnv({remote:{data:{[S]:{v:'cloud'}},revision:5},local:{[S]:JSON.stringify({v:'stale'})},workspace:'u1'});await wait();
+  const local={[S]:JSON.stringify({v:'stale'})};
+  const e=makeEnv({remote:{data:{[S]:{v:'cloud'}},revision:5},local:{...local,combatCloudSyncedV1:syncedRecord('u1',3,local)},workspace:'u1'});await wait();
   assert.equal(e.ls.get(S),'{"v":"cloud"}');assert.deepEqual(e.log,[]);
 });
 test('network failure keeps local data and does not sign the user out',async()=>{
@@ -42,7 +46,8 @@ test('network failure keeps local data and does not sign the user out',async()=>
   assert.equal(e.ls.get(S),'{"v":"mine"}');assert.deepEqual(e.log,[]);
 });
 test("another account's device data is never offered for upload",async()=>{
-  const e=makeEnv({remote:{data:{},revision:1},local:{[S]:JSON.stringify({v:'otheruser'})},workspace:'u2'});await wait();
+  const local={[S]:JSON.stringify({v:'otheruser'})};
+  const e=makeEnv({remote:{data:{},revision:1},local:{...local,combatCloudSyncedV1:syncedRecord('u2',4,local)},workspace:'u2'});await wait();
   assert.equal(e.ls.has(S),false);assert.deepEqual(e.log,[]);
 });
 
@@ -69,4 +74,46 @@ test('a patch against a newer cloud revision is treated as a conflict',async()=>
   e.db.data={[S]:{v:'other'}};e.db.revision=9;
   e.localStorage.setItem(S,JSON.stringify({v:2}));await wait();
   assert.ok(e.log.includes('confirm'));assert.deepEqual(plain(e.db.data),{[S]:{v:2}});assert.equal(e.db.revision,10);
+});
+
+const SAFE='combatCloudSafetyCopyV1';
+test('changes made while signed out or offline are pushed instead of replaced by an older cloud copy',async()=>{
+  // Synced at revision 306, then the device kept working without the cloud; the cloud never moved.
+  const before={[S]:JSON.stringify({v:'oct6'})};
+  const e=makeEnv({remote:{data:{[S]:{v:'oct6'}},revision:306},local:{[S]:JSON.stringify({v:'oct21'}),combatCloudSyncedV1:syncedRecord('u1',306,before)},workspace:'u1'});await wait();
+  assert.equal(e.log.includes('confirm'),false);
+  assert.deepEqual(plain(e.db.data),{[S]:{v:'oct21'}});assert.equal(e.ls.get(S),'{"v":"oct21"}');assert.equal(e.ls.has(D),false);
+});
+test('device data with no sync record is never replaced silently',async()=>{
+  const e=makeEnv({remote:{data:{[S]:{v:'cloud'}},revision:5},local:{[S]:JSON.stringify({v:'device'})},workspace:'u1',confirmAns:true});await wait();
+  assert.ok(e.log.includes('confirm'));
+  assert.deepEqual(plain(e.db.data),{[S]:{v:'device'}});assert.equal(e.ls.get(S),'{"v":"device"}');
+  assert.deepEqual(JSON.parse(e.ls.get(SAFE)).data,{[S]:{v:'cloud'}});
+});
+test('choosing the cloud copy keeps a safety copy of the device data',async()=>{
+  const e=makeEnv({remote:{data:{[S]:{v:'cloud'}},revision:5},local:{[S]:JSON.stringify({v:'device'})},workspace:'u1',confirmAns:false});await wait();
+  assert.ok(e.log.includes('confirm'));
+  assert.equal(e.ls.get(S),'{"v":"cloud"}');
+  const copy=JSON.parse(e.ls.get(SAFE));assert.equal(copy.source,'device');assert.deepEqual(copy.data,{[S]:{v:'device'}});
+});
+test('a device that signed in for the first time keeps its data when it differs from the cloud',async()=>{
+  const e=makeEnv({remote:{data:{[S]:{v:'cloud'}},revision:5},local:{[S]:JSON.stringify({v:'device'})},confirmAns:false});await wait();
+  assert.ok(e.log.includes('confirm'));assert.deepEqual(JSON.parse(e.ls.get(SAFE)).data,{[S]:{v:'device'}});
+});
+test("another account's unsynced device data asks first and keeps a safety copy",async()=>{
+  const e=makeEnv({remote:{data:{},revision:1},local:{[S]:JSON.stringify({v:'otheruser'})},workspace:'u2',confirmAns:true});await wait();
+  assert.ok(e.log.includes('confirm'));assert.equal(e.ls.has(S),false);
+  assert.deepEqual(JSON.parse(e.ls.get(SAFE)).data,{[S]:{v:'otheruser'}});
+});
+test('a successful sync records the device state so later cloud updates load silently',async()=>{
+  const e=makeEnv({remote:{data:{[S]:{v:1}},revision:5},local:{[S]:JSON.stringify({v:1})},workspace:'u1'});await wait();
+  e.localStorage.setItem(S,JSON.stringify({v:2}));await wait();
+  const rec=JSON.parse(e.ls.get('combatCloudSyncedV1'));assert.equal(rec.owner,'u1');assert.equal(rec.revision,6);
+  assert.equal(rec.hash,fingerprint(JSON.stringify({[S]:{v:2}})));
+});
+
+test('a clean device that loads newer cloud data keeps no safety copy',async()=>{
+  const local={[S]:JSON.stringify({v:'old'})};
+  const e=makeEnv({remote:{data:{[S]:{v:'new'}},revision:8},local:{...local,combatCloudSyncedV1:syncedRecord('u1',7,local)},workspace:'u1'});await wait();
+  assert.equal(e.ls.get(S),'{"v":"new"}');assert.equal(e.ls.has(SAFE),false);assert.deepEqual(e.log,[]);
 });

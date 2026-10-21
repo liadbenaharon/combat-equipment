@@ -5,6 +5,8 @@ const APP_KEYS=()=>Object.values(window.CombatData?.KEYS||{});
 const WORKSPACE_KEY='combatCloudWorkspaceV1';
 const DEMO_KEY='combatReviewDemoV1';
 const DIRTY_KEY='combatCloudDirtyV1';
+const SYNCED_KEY='combatCloudSyncedV1';
+const SAFETY_KEY='combatCloudSafetyCopyV1';
 const READY=typeof config.url==='string'&&config.url.startsWith('https://')&&
   typeof config.publishableKey==='string'&&!config.publishableKey.startsWith('REPLACE_');
 
@@ -41,6 +43,39 @@ function readDirty(){
 }
 function writeDirty(owner,base){localStorage.setItem(DIRTY_KEY,JSON.stringify({owner,base}))}
 function clearDirty(){localStorage.removeItem(DIRTY_KEY)}
+// Fingerprint of the device data the cloud last confirmed. Device data that no longer matches it was changed while
+// signed out, offline or while the server was unavailable, and must never be replaced by the cloud copy silently.
+function fingerprint(text){let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+':'+text.length}
+function readSynced(){
+  try{const value=JSON.parse(localStorage.getItem(SYNCED_KEY));return value&&typeof value.owner==='string'&&typeof value.hash==='string'&&Number.isFinite(value.revision)?value:null}catch{return null}
+}
+function recordSynced(owner,rev,text=snapshotText(snapshot())){try{localStorage.setItem(SYNCED_KEY,JSON.stringify({owner,revision:rev,hash:fingerprint(text)}))}catch{}}
+function localMatchesSynced(owner){const value=readSynced();return Boolean(value&&value.owner===owner&&value.hash===fingerprint(snapshotText(snapshot())))}
+
+// The last copy of data this device was about to discard, restorable from the account screen.
+function readSafetyCopy(){try{const value=JSON.parse(localStorage.getItem(SAFETY_KEY));return value&&value.data&&typeof value.data==='object'?value:null}catch{return null}}
+function keepSafetyCopy(data,source){
+  if(!data||!Object.keys(data).length)return true;
+  try{localStorage.setItem(SAFETY_KEY,JSON.stringify({savedAt:new Date().toISOString(),source,data}));return true}
+  catch{return false}
+}
+function renderSafety(){
+  const body=$('cloudAccountBody');if(!body)return;
+  const old=$('cloudSafety');if(old?.parentNode)old.parentNode.removeChild(old);
+  const copy=readSafetyCopy();if(!copy)return;
+  const when=new Intl.DateTimeFormat('he-IL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(copy.savedAt));
+  const history=Array.isArray(copy.data.combatEquipmentHistoryV1)?copy.data.combatEquipmentHistoryV1.length:0;
+  const panel=document.createElement('div');panel.id='cloudSafety';panel.className='cloud-panel';
+  panel.innerHTML=`<h3>עותק ביטחון</h3><p class="mini">${copy.source==='cloud'?'הנתונים שהיו בענן':'הנתונים שהיו במכשיר'} לפני שהוחלפו · ${escapeHtml(when)} · ${history} אימונים בהיסטוריה</p><div class="cloud-actions"><button id="restoreSafety" class="btn primary" type="button">שחזור עותק הביטחון</button><button id="dropSafety" class="btn" type="button">מחיקת העותק</button></div>`;
+  body.appendChild(panel);
+  $('restoreSafety').onclick=()=>{
+    if(!confirm('לשחזר את עותק הביטחון? הנתונים הנוכחיים במכשיר יוחלפו בו'+(activeOwner?' וגם יישמרו בענן.':'.')))return;
+    try{const current=snapshot();window.CombatData.clearAll();window.CombatData.importBackup({app:'combat-equipment',data:copy.data});keepSafetyCopy(current,'device');refreshAppFromLocal();renderSafety();announce('עותק הביטחון שוחזר')}
+    catch(error){announce('לא ניתן לשחזר: '+error.message,'error')}
+  };
+  $('dropSafety').onclick=()=>{if(confirm('למחוק את עותק הביטחון מהמכשיר?')){localStorage.removeItem(SAFETY_KEY);renderSafety()}};
+}
+
 function markDirty(){
   if(!activeOwner||pendingMigration||suppressWrites)return;
   changeSeq++;
@@ -74,6 +109,7 @@ function signedOutUi(){
   $('cloudAccountBody').innerHTML=`<div class="cloud-panel"><h3>שמירה מאובטחת בענן</h3><p class="mini">הנתונים במכשיר לא יועלו בלי אישור מפורש. לאחר הכניסה כל מאמן רואה רק את הנתונים שלו.</p><div class="cloud-actions"><button id="googleSignIn" class="btn primary" type="button">כניסה עם Google</button><button id="startDemo" class="btn" type="button">כניסה למצב הדגמה</button></div><p class="mini">מצב ההדגמה מאפשר לבדוק את כל כלי ניהול הציוד במכשיר ללא חשבון וללא העלאת נתונים לענן.</p></div>`;
   $('googleSignIn').onclick=signIn;
   $('startDemo').onclick=startDemo;
+  renderSafety();
 }
 
 function demoUi(){
@@ -81,6 +117,7 @@ function demoUi(){
   $('cloudAccountBody').innerHTML='<div class="cloud-panel"><div class="cloud-user">מצב הדגמה פעיל</div><div class="cloud-status">הציוד, השיוכים, ההחזרות, הנוכחות וההיסטוריה זמינים לבדיקה ללא התחברות. הנתונים נשמרים במכשיר בלבד ואינם נשלחים לענן.</div><div class="cloud-actions"><button id="exitDemo" class="btn" type="button">יציאה ממצב הדגמה</button><button id="demoGoogleSignIn" class="btn primary" type="button">כניסה עם Google לסנכרון</button></div></div>';
   $('exitDemo').onclick=()=>{sessionStorage.removeItem(DEMO_KEY);signedOutUi()};
   $('demoGoogleSignIn').onclick=()=>{sessionStorage.removeItem(DEMO_KEY);signIn()};
+  renderSafety();
 }
 
 function startDemo(){
@@ -93,6 +130,7 @@ function startDemo(){
 function unavailableUi(){
   $('cloudAccountButton').textContent='ענן בהכנה';
   $('cloudAccountBody').innerHTML='<div class="cloud-panel"><h3>החיבור כמעט מוכן</h3><p class="mini">חסר מפתח הפרסום הציבורי של פרויקט Supabase. השמירה המקומית ממשיכה לעבוד כרגיל.</p></div>';
+  renderSafety();
 }
 
 function offlineUi(){
@@ -100,6 +138,7 @@ function offlineUi(){
   $('cloudAccountBody').innerHTML='<div class="cloud-panel"><h3>אין חיבור לשרת הסנכרון</h3><p class="mini">החשבון לא נותק. אפשר להמשיך לעבוד — הנתונים נשמרים במכשיר ויסונכרנו אוטומטית כשהחיבור יחזור.</p><div class="cloud-actions"><button id="cloudRetry" class="btn primary" type="button">ניסיון חוזר</button></div></div>';
   $('cloudRetry').onclick=()=>connect();
   announce(friendlyError({message:'Failed to fetch'}),'error');
+  renderSafety();
 }
 
 async function signedInUi(){
@@ -110,6 +149,7 @@ async function signedInUi(){
   if($('syncNow'))$('syncNow').onclick=()=>queueSave(true);
   $('signOut').onclick=()=>client.auth.signOut();
   if(profile?.role==='admin')await loadCoaches();
+  renderSafety();
 }
 
 async function signIn(){
@@ -128,11 +168,17 @@ async function getState(ownerId){
   if(error)throw error;return data;
 }
 
+// Returns true when a safety copy of unsynced device data was kept.
 function replaceLocal(data,ownerId,remoteRevision){
+  const current=snapshot(),localOwner=localStorage.getItem(WORKSPACE_KEY)||ownerId;
+  const needCopy=hasLocalData()&&snapshotText(current)!==snapshotText(data||{})&&!localMatchesSynced(localOwner);
+  const kept=!needCopy||keepSafetyCopy(current,'device');
+  if(!kept&&!confirm('אין מספיק מקום לשמור עותק ביטחון של הנתונים במכשיר. להחליף אותם בכל זאת?'))throw new Error('הנתונים במכשיר נשמרו ולא הוחלפו');
   suppressWrites=true;
   try{window.CombatData.clearAll();if(data&&Object.keys(data).length)window.CombatData.importBackup({app:'combat-equipment',data});localStorage.setItem(WORKSPACE_KEY,ownerId)}
   finally{suppressWrites=false}
-  clearDirty();activeOwner=ownerId;revision=remoteRevision;
+  clearDirty();activeOwner=ownerId;revision=remoteRevision;recordSynced(ownerId,remoteRevision);
+  return needCopy;
 }
 
 function refreshAppFromLocal(){
@@ -147,16 +193,25 @@ function refreshAppFromLocal(){
 // Brings the device and the cloud copy of one workspace into agreement without silently dropping unsynced local changes.
 async function adoptRemote(remote,ownerId){
   activeOwner=ownerId;revision=remote.revision;
-  const dirty=readDirty();
-  if(dirty&&dirty.owner===ownerId){
-    localStorage.setItem(WORKSPACE_KEY,ownerId);
-    if(dirty.base===remote.revision){queueSave(true);return}
-    if(snapshotText(remote.data)===snapshotText(snapshot())){clearDirty();return}
-    const keepLocal=confirm('יש במכשיר הזה שינויים שעדיין לא סונכרנו, ובינתיים הנתונים בענן עודכנו ממכשיר אחר.\n\nאישור — לשמור את הנתונים מהמכשיר הזה (הם יחליפו את הענן)\nביטול — לטעון את הנתונים מהענן (השינויים שלא סונכרנו יימחקו)');
-    if(keepLocal){queueSave(true);return}
+  const dirty=readDirty(),localOwner=localStorage.getItem(WORKSPACE_KEY);
+  if(snapshotText(remote.data)===snapshotText(snapshot())){
+    clearDirty();localStorage.setItem(WORKSPACE_KEY,ownerId);recordSynced(ownerId,remote.revision);synced={owner:ownerId,revision:remote.revision,raws:readRaws()};return;
   }
-  if(snapshotText(remote.data)!==snapshotText(snapshot())){replaceLocal(remote.data,ownerId,remote.revision);refreshAppFromLocal();return}
-  clearDirty();localStorage.setItem(WORKSPACE_KEY,ownerId);synced={owner:ownerId,revision:remote.revision,raws:readRaws()};
+  const ownDirty=dirty&&dirty.owner===ownerId;
+  // Data of another account is never uploaded here; replaceLocal keeps a safety copy of it.
+  const unsynced=ownDirty||(hasLocalData()&&(!localOwner||localOwner===ownerId)&&!localMatchesSynced(ownerId));
+  if(unsynced){
+    localStorage.setItem(WORKSPACE_KEY,ownerId);
+    const last=readSynced(),base=ownDirty?dirty.base:last?.owner===ownerId?last.revision:null;
+    let keepLocal=base===remote.revision;
+    if(!keepLocal)keepLocal=confirm('יש במכשיר הזה נתונים שלא סונכרנו לענן, והם שונים מהנתונים שבענן.\n\nאישור — לשמור את הנתונים מהמכשיר הזה (הם יחליפו את הענן)\nביטול — לטעון את הנתונים מהענן\n\nבשתי הדרכים נשמר עותק ביטחון של הצד שמוחלף, ואפשר לשחזר אותו במסך החשבון.');
+    if(keepLocal){
+      if(base!==remote.revision)keepSafetyCopy(remote.data,'cloud');
+      writeDirty(ownerId,remote.revision);queueSave(true);return;
+    }
+  }
+  const copied=replaceLocal(remote.data,ownerId,remote.revision);refreshAppFromLocal();
+  if(copied)announce('הנתונים נטענו מהענן. עותק ביטחון של נתוני המכשיר נשמר במסך החשבון.');
 }
 
 async function openOwnWorkspace(){
@@ -166,7 +221,7 @@ async function openOwnWorkspace(){
   if(!remoteHasData&&hasLocalData()&&!(dirty&&dirty.owner===user.id)){
     if(localOwner&&localOwner!==user.id){
       // The data on this device belongs to another account: never offer to upload it into this account.
-      const otherUnsynced=dirty&&dirty.owner===localOwner;
+      const otherUnsynced=(dirty&&dirty.owner===localOwner)||!localMatchesSynced(localOwner);
       if(otherUnsynced&&!confirm('במכשיר יש שינויים של חשבון אחר שעדיין לא סונכרנו. מומלץ לבטל, להתחבר לחשבון ההוא ולסנכרן. להמשיך ולמחוק אותם מהמכשיר?')){await client.auth.signOut();throw new Error('הכניסה בוטלה כדי לשמור על הנתונים שבמכשיר')}
       replaceLocal({},user.id,remote.revision);refreshAppFromLocal();return;
     }
@@ -237,7 +292,7 @@ async function saveSnapshot(showSuccess=false){
     }
     if(conflict)synced=null;
     else{
-      revision=next;synced={owner,revision,raws};
+      revision=next;synced={owner,revision,raws};recordSynced(owner,revision,snapshotText(dataFromRaws(raws)));
       if(changeSeq===seq)clearDirty();else writeDirty(activeOwner,revision);
       ok=true;if(showSuccess)announce('הסנכרון הושלם');
     }
@@ -309,7 +364,7 @@ async function detachDevice(){
   if(activeOwner&&!pendingMigration&&!await flushSave()){
     if(!confirm('יש שינויים שעדיין לא סונכרנו לענן והם יימחקו. להמשיך בכל זאת?'))return false;
   }
-  clearTimeout(saveTimer);activeOwner=null;clearDirty();localStorage.removeItem(WORKSPACE_KEY);
+  clearTimeout(saveTimer);activeOwner=null;clearDirty();localStorage.removeItem(WORKSPACE_KEY);localStorage.removeItem(SYNCED_KEY);localStorage.removeItem(SAFETY_KEY);
   try{await client.auth.signOut()}catch{}
   return true;
 }
