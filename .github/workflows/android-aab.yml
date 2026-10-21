@@ -44,6 +44,12 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle --no-daemon --stacktrace bundleRelease
+      - name: Check the web app is packaged for offline use
+        run: |
+          aab=$(ls app/build/outputs/bundle/release/*.aab)
+          for f in index.html app-config.js easy-mode.js cloud-bundle.js app-design.css fonts/heebo-hebrew.woff2; do
+            unzip -l "$aab" | grep -q "base/assets/www/$f" || { echo "::error::$f is missing from the bundle"; exit 1; }
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: combat-equipment-aab

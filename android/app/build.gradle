@@ -18,8 +18,8 @@ android {
         applicationId 'com.liadbenaharon.combatequipment'
         minSdk 24
         targetSdk 36
-        versionCode 263
-        versionName '2.4.13'
+        versionCode 264
+        versionName '2.4.19'
     }
 
     signingConfigs {
@@ -50,6 +50,19 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+// The web app is packaged into the APK so it opens without a connection (served by MainActivity from www/).
+def bundledWebDir = layout.buildDirectory.dir('generated/bundledWeb').get().asFile
+def copyWebApp = tasks.register('copyWebApp', Sync) {
+    from(rootProject.projectDir.parentFile) {
+        include 'index.html', 'privacy.html', 'delete-account.html', 'manifest.webmanifest'
+        include '*.js', '*.css', '*.png', '*.svg', 'fonts/**'
+        exclude 'sw.js', 'cloud-sync.js'
+    }
+    into new File(bundledWebDir, 'www')
+}
+android.sourceSets.main.assets.srcDir(bundledWebDir)
+preBuild.dependsOn(copyWebApp)
 
 dependencies {
 }

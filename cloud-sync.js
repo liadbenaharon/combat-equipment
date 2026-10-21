@@ -99,12 +99,27 @@ function addUi(){
   overlay.querySelector('.cloud-close').onclick=()=>overlay.classList.remove('show');
   overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.classList.remove('show')});
   const style=document.createElement('style');style.textContent=`
-    .headline{flex-wrap:wrap}.cloud-account{order:3;width:100%;min-height:42px;border:1px solid #52634a;border-radius:12px;background:#182017;color:#f4f2e8;font:inherit;font-weight:900;padding:8px 12px}
+    .headline{flex-wrap:wrap}.cloud-backup-warning{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;margin-top:10px;padding:10px 13px;border:1px solid #a4652f;border-radius:14px;background:#3a2414;color:#ffd9b8;font:inherit;text-align:right}.cloud-backup-warning[hidden]{display:none}.cloud-backup-warning b{font-size:14px}.cloud-backup-warning span{font-size:12px;color:#f3b98a}
+    .cloud-account{order:3;width:100%;min-height:42px;border:1px solid #52634a;border-radius:12px;background:#182017;color:#f4f2e8;font:inherit;font-weight:900;padding:8px 12px}
     .cloud-account[data-online="true"]{color:#c9ffd0;border-color:#53745a}.cloud-modal{max-height:min(82vh,720px);overflow:auto}.cloud-title{display:flex;align-items:center;justify-content:space-between;gap:10px}.cloud-title h2{margin:0}.cloud-close{width:44px;min-height:44px;border:1px solid #56624e;border-radius:12px;background:#171c15;color:#fff;font-size:28px}.cloud-notice{margin:12px 0;padding:10px 12px;border-radius:11px;background:#293221}.cloud-notice[data-type="error"]{background:#4a211d;color:#ffd5d0}.cloud-panel{border:1px solid #43513d;border-radius:14px;padding:13px;margin-top:12px}.cloud-actions{display:grid;gap:8px;margin-top:12px}.cloud-user{font-weight:900;font-size:17px}.cloud-status{color:#b8baaf;font-size:13px;margin-top:4px}.coach-list{display:grid;gap:8px;margin-top:10px}.coach-choice{text-align:right;border:1px solid #4c5843;border-radius:12px;background:#161c14;color:#fff;padding:11px}.coach-choice.active{border-color:#f07a22;background:#322317}.coach-choice span{display:block;color:#b8baaf;font-size:12px;margin-top:3px}
   `;document.head.appendChild(style);
 }
 
+// A visible reminder on the main screen while device data is not backed up to any account.
+function backupWarning(show){
+  let bar=$('cloudBackupWarning');
+  if(!show){if(bar)bar.hidden=true;return}
+  if(!bar){
+    bar=document.createElement('button');bar.type='button';bar.id='cloudBackupWarning';bar.className='cloud-backup-warning';
+    bar.innerHTML='<b>⚠️ הנתונים שמורים רק בטלפון הזה</b><span>לחצו כדי להתחבר ולגבות אותם בענן</span>';
+    bar.onclick=()=>$('cloudAccountModal')?.classList.add('show');
+    document.querySelector('.top')?.appendChild(bar);
+  }
+  bar.hidden=false;
+}
+
 function signedOutUi(){
+  backupWarning(hasLocalData());
   $('cloudAccountButton').textContent='כניסה עם Google';$('cloudAccountButton').dataset.online='false';
   $('cloudAccountBody').innerHTML=`<div class="cloud-panel"><h3>שמירה מאובטחת בענן</h3><p class="mini">הנתונים במכשיר לא יועלו בלי אישור מפורש. לאחר הכניסה כל מאמן רואה רק את הנתונים שלו.</p><div class="cloud-actions"><button id="googleSignIn" class="btn primary" type="button">כניסה עם Google</button><button id="startDemo" class="btn" type="button">כניסה למצב הדגמה</button></div><p class="mini">מצב ההדגמה מאפשר לבדוק את כל כלי ניהול הציוד במכשיר ללא חשבון וללא העלאת נתונים לענן.</p></div>`;
   $('googleSignIn').onclick=signIn;
@@ -113,6 +128,7 @@ function signedOutUi(){
 }
 
 function demoUi(){
+  backupWarning(false);
   $('cloudAccountButton').textContent='מצב הדגמה';$('cloudAccountButton').dataset.online='false';
   $('cloudAccountBody').innerHTML='<div class="cloud-panel"><div class="cloud-user">מצב הדגמה פעיל</div><div class="cloud-status">הציוד, השיוכים, ההחזרות, הנוכחות וההיסטוריה זמינים לבדיקה ללא התחברות. הנתונים נשמרים במכשיר בלבד ואינם נשלחים לענן.</div><div class="cloud-actions"><button id="exitDemo" class="btn" type="button">יציאה ממצב הדגמה</button><button id="demoGoogleSignIn" class="btn primary" type="button">כניסה עם Google לסנכרון</button></div></div>';
   $('exitDemo').onclick=()=>{sessionStorage.removeItem(DEMO_KEY);signedOutUi()};
@@ -142,6 +158,7 @@ function offlineUi(){
 }
 
 async function signedInUi(){
+  backupWarning(false);
   $('cloudAccountButton').textContent=profile?.role==='admin'?'אדמין · '+displayName(profile):displayName(profile);
   $('cloudAccountButton').dataset.online='true';
   $('cloudAccountBody').innerHTML=`<div class="cloud-panel"><div class="cloud-user">${escapeHtml(displayName(profile))}</div><div class="cloud-status">${escapeHtml(user.email||'')} · ${profile?.role==='admin'?'מנהל מערכת':'מאמן'}</div><div class="cloud-actions">${pendingMigration?'<button id="approveMigration" class="btn primary" type="button">אישור העברת נתוני המכשיר לענן</button>':'<button id="syncNow" class="btn" type="button">סנכרון עכשיו</button>'}<button id="signOut" class="btn danger" type="button">יציאה מהחשבון</button><a class="btn" href="./delete-account.html">בקשת מחיקת חשבון ונתונים</a></div></div>${profile?.role==='admin'?'<div class="cloud-panel"><h3>ניהול מאמנים</h3><p class="mini">בחירת מאמן פותחת את סביבת העבודה שלו. כל שינוי נשמר בחשבונו ונרשם ביומן הבקרה.</p><div id="coachList" class="coach-list"><span class="mini">טוען מאמנים…</span></div></div>':''}`;
