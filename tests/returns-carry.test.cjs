@@ -79,3 +79,13 @@ test('orphaned carried equipment is removed after its source workout was already
   assert.equal(JSON.parse(data.get('combatEquipmentReturnsV1')).__legacyCarryRecoveryDoneV1,true);
   assert.equal(api.recoverOutstandingFromHistory(),false);
 });
+
+test('return status reflects stored changes made after an earlier read',()=>{
+  const state={equipment:[{id:'anchor',name:'עוגן',qty:1,checked:[true],assignments:[{name:'רימון',qty:1,units:[0]}]}]};
+  const {api,data}=harness(state);
+  assert.equal(api.missingCurrent().length,1);
+  data.set('combatEquipmentReturnsV1',JSON.stringify({current:{'anchor:0':true}}));
+  assert.equal(api.missingCurrent().length,0);
+  data.set('combatEquipmentReturnsV1',JSON.stringify({current:{}}));
+  assert.equal(api.missingCurrent().length,1);
+});
