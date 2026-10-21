@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
@@ -31,13 +30,19 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class MainActivity extends Activity {
     private static final String START_URL = "https://liadbenaharon.github.io/combat-equipment/";
@@ -48,6 +53,8 @@ public final class MainActivity extends Activity {
     private static final int PICK_FILE_REQUEST = 1401;
     private static final int SAVE_FILE_REQUEST = 1402;
     private static final long SPLASH_TIMEOUT_MS = 2500;
+    private static final int PAGE_TIMEOUT_MS = 3000;
+    private static final Pattern VERSIONED_ASSET = Pattern.compile("\\./([A-Za-z0-9_./-]+)\\?(v=\\d+)");
 
     private WebView webView;
     private ValueCallback<Uri[]> filePickerCallback;
@@ -55,6 +62,7 @@ public final class MainActivity extends Activity {
     private String pendingMimeType;
     private boolean contentReady;
     private View rootView;
+    private Map<String, String> bundledVersions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -207,9 +215,13 @@ public final class MainActivity extends Activity {
     }
 
     /**
-     * Serves the app from the files packaged in the APK. The pages keep their original
-     * https://liadbenaharon.github.io origin, so data saved by earlier versions stays available
-     * and Google sign-in keeps returning to the same address.
+     * Serves the app from the files packaged in the APK, so it opens without a connection. The pages keep
+     * their original https://liadbenaharon.github.io origin, so data saved by earlier versions stays
+     * available and Google sign-in keeps returning to the same address.
+     *
+     * Pages come from the network when it answers within PAGE_TIMEOUT_MS, so a published update reaches the
+     * app without a new Play release; otherwise the packaged page is used. Versioned files (name.js?v=N) come
+     * from the APK only when the packaged copy is that exact version, and from the network otherwise.
      */
     private WebResourceResponse bundledResponse(WebResourceRequest request) {
         if (!"GET".equalsIgnoreCase(request.getMethod())) return null;
@@ -219,19 +231,72 @@ public final class MainActivity extends Activity {
         String relative = path.length() > APP_PATH.length() ? path.substring(APP_PATH.length()) : "";
         if (relative.isEmpty() || relative.endsWith("/")) relative += "index.html";
         if (relative.contains("..")) return null;
-        AssetManager assets = getAssets();
+        if (request.isForMainFrame() || relative.endsWith(".html")) return pageResponse(uri, relative);
+        String query = uri.getQuery();
+        if (query != null && !query.equals(bundledVersions().get(relative))) return null;
+        return assetResponse(relative);
+    }
+
+    private WebResourceResponse pageResponse(Uri uri, String relative) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(uri.toString()).openConnection();
+            connection.setConnectTimeout(PAGE_TIMEOUT_MS);
+            connection.setReadTimeout(PAGE_TIMEOUT_MS);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Cache-Control", "no-cache");
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                byte[] body = readAll(connection.getInputStream());
+                return new WebResourceResponse("text/html", "UTF-8", 200, "OK", noCacheHeaders(),
+                        new ByteArrayInputStream(body));
+            }
+        } catch (IOException offline) {
+            // No connection or too slow: use the packaged page below.
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+        return assetResponse(relative);
+    }
+
+    private WebResourceResponse assetResponse(String relative) {
         InputStream stream;
         try {
-            stream = assets.open(ASSET_ROOT + relative);
+            stream = getAssets().open(ASSET_ROOT + relative);
         } catch (IOException missing) {
             return null; // Not packaged: fall back to the network.
         }
         String mime = mimeType(relative);
         boolean text = mime.startsWith("text/") || mime.endsWith("javascript") || mime.endsWith("json")
                 || mime.endsWith("+xml") || mime.equals("application/manifest+json");
+        return new WebResourceResponse(mime, text ? "UTF-8" : null, 200, "OK", noCacheHeaders(), stream);
+    }
+
+    /** The ?v= version of each file the packaged index.html loads. */
+    private synchronized Map<String, String> bundledVersions() {
+        if (bundledVersions != null) return bundledVersions;
+        Map<String, String> versions = new HashMap<>();
+        try (InputStream stream = getAssets().open(ASSET_ROOT + "index.html")) {
+            Matcher match = VERSIONED_ASSET.matcher(new String(readAll(stream), StandardCharsets.UTF_8));
+            while (match.find()) versions.put(match.group(1), match.group(2));
+        } catch (IOException missing) {
+            // Nothing packaged: every versioned file comes from the network.
+        }
+        bundledVersions = versions;
+        return versions;
+    }
+
+    private static Map<String, String> noCacheHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Cache-Control", "no-cache");
-        return new WebResourceResponse(mime, text ? "UTF-8" : null, 200, "OK", headers, stream);
+        return headers;
+    }
+
+    private static byte[] readAll(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[16384];
+        int read;
+        while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+        return output.toByteArray();
     }
 
     private static String mimeType(String name) {
