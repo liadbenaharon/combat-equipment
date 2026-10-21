@@ -243,6 +243,7 @@ public final class MainActivity extends Activity {
         if (lower.endsWith(".svg")) return "image/svg+xml";
         if (lower.endsWith(".json")) return "application/json";
         if (lower.endsWith(".webmanifest")) return "application/manifest+json";
+        if (lower.endsWith(".woff2")) return "font/woff2";
         return "application/octet-stream";
     }
 

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const APP=window.COMBAT_APP||{version:'unknown'};
-  const nav={check:['✓','ציוד'],summary:['👥','סיכום'],history:['◷','היסטוריה'],attendance:['?','נוכחות']};
+  const nav={check:['<svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>','ציוד'],summary:['<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>','סיכום'],history:['<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>','היסטוריה'],attendance:['<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/></svg>','נוכחות']};
   let installPrompt=null,toastTimer=0;
   let undoTimer=0;
 
