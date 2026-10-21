@@ -11,6 +11,8 @@ const READY=typeof config.url==='string'&&config.url.startsWith('https://')&&
 let client=null,user=null,profile=null,activeOwner=null,revision=0;
 let suppressWrites=false,pendingMigration=false,saveTimer=0,saveInFlight=false,saveAgain=false;
 let changeSeq=0,connecting=false,waitingForNetwork=false;
+// What the cloud holds at a known revision, as raw stored text per key, so a save can send only the keys that changed.
+let synced=null,patchSupported=true;
 
 const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -18,6 +20,9 @@ const displayName=item=>item?.display_name?.trim()||item?.email||'מאמן לל�
 const snapshot=()=>window.CombatData?.exportBackup()?.data||{};
 const snapshotText=data=>JSON.stringify(data||{});
 const hasLocalData=()=>APP_KEYS().some(key=>localStorage.getItem(key)!==null);
+const readRaws=()=>new Map(APP_KEYS().map(key=>[key,localStorage.getItem(key)]));
+const dataFromRaws=raws=>{const data={};raws.forEach((raw,key)=>{if(raw!==null)data[key]=JSON.parse(raw)});return data};
+const isMissingFunction=error=>error?.code==='PGRST202'||/could not find the function/i.test(String(error?.message||''));
 
 // Network failures surface from fetch as "Failed to fetch" / "Load failed" and from auth-js as AuthRetryableFetchError.
 function isNetworkError(error){
@@ -151,7 +156,7 @@ async function adoptRemote(remote,ownerId){
     if(keepLocal){queueSave(true);return}
   }
   if(snapshotText(remote.data)!==snapshotText(snapshot())){replaceLocal(remote.data,ownerId,remote.revision);refreshAppFromLocal();return}
-  clearDirty();localStorage.setItem(WORKSPACE_KEY,ownerId);
+  clearDirty();localStorage.setItem(WORKSPACE_KEY,ownerId);synced={owner:ownerId,revision:remote.revision,raws:readRaws()};
 }
 
 async function openOwnWorkspace(){
@@ -211,12 +216,28 @@ async function saveSnapshot(showSuccess=false){
   saveInFlight=true;
   const seq=changeSeq;let ok=false,conflict=false;
   try{
-    const current=snapshot();
-    const {data,error}=await client.from('coach_states').update({data:current}).eq('owner_id',activeOwner).eq('revision',revision).select('revision').maybeSingle();
-    if(error)throw error;
-    if(!data)conflict=true;
+    const raws=readRaws(),owner=activeOwner;
+    const base=patchSupported&&synced?.owner===owner&&synced.revision===revision?synced.raws:null;
+    let next=null,patched=false;
+    if(base){
+      const set={},remove=[];
+      raws.forEach((raw,key)=>{if(raw===(base.get(key)??null))return;if(raw===null)remove.push(key);else set[key]=JSON.parse(raw)});
+      if(!Object.keys(set).length&&!remove.length)next=revision;
+      else{
+        const {data,error}=await client.rpc('patch_coach_state',{p_owner:owner,p_revision:revision,p_set:set,p_remove:remove});
+        if(error&&isMissingFunction(error))patchSupported=false;
+        else if(error)throw error;
+        else{patched=true;if(data===null)conflict=true;else next=Number(data)}
+      }
+    }
+    if(next===null&&!conflict&&!patched){
+      const {data,error}=await client.from('coach_states').update({data:dataFromRaws(raws)}).eq('owner_id',owner).eq('revision',revision).select('revision').maybeSingle();
+      if(error)throw error;
+      if(!data)conflict=true;else next=data.revision;
+    }
+    if(conflict)synced=null;
     else{
-      revision=data.revision;
+      revision=next;synced={owner,revision,raws};
       if(changeSeq===seq)clearDirty();else writeDirty(activeOwner,revision);
       ok=true;if(showSuccess)announce('הסנכרון הושלם');
     }

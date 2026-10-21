@@ -226,7 +226,7 @@ test('service worker cache/assets and injection agree; injection is idempotent',
   assert.ok(a.ASSETS.includes('./app-lifecycle.js?v=10'));assert.ok(html.includes('./app-lifecycle.js?v=10'));
   assert.ok(a.ASSETS.includes('./assignment-transfer.js?v=3'));assert.ok(html.includes('./assignment-transfer.js?v=3'));
   assert.ok(a.ASSETS.includes('./cloud-config.js?v=2'));assert.ok(html.includes('./cloud-config.js?v=2'));
-  assert.ok(a.ASSETS.includes('./cloud-bundle.js?v=5'));assert.ok(html.includes('./cloud-bundle.js?v=5'));
+  assert.ok(a.ASSETS.includes('./cloud-bundle.js?v=6'));assert.ok(html.includes('./cloud-bundle.js?v=6'));
   assert.ok(a.ASSETS.includes('./native-ui.js?v=5'));assert.ok(html.includes('./native-ui.js?v=5'));
 });
 test('service worker installs new cache and serves enhanced HTML/assets offline',async()=>{
